@@ -1,15 +1,15 @@
 #include <stdio.h>
-#include "Interface.h"
+#include "replication_service.h"
 
 void RegisterService(int ServiceID) {
-	return;
+    return;
 }
 
 void SendData(int ServiceID, void* data, int dataSize) {
-	return;
+    return;
 }
 
 void ReceiveData(void* data, int dataSize) {
-	printf("Poy");
-	return;
+    printf("Poy");
+    return;
 }

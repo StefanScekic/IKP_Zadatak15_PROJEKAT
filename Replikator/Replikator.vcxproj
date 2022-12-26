@@ -139,11 +139,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Interface.c" />
-    <ClCompile Include="Replikator.c" />
+    <ClCompile Include="queue.c" />
+    <ClCompile Include="replication_service.c" />
+    <ClCompile Include="replikator.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Interface.h" />
+    <ClInclude Include="queue.h" />
+    <ClInclude Include="replication_service.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

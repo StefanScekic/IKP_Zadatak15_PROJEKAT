@@ -1,26 +1,22 @@
 #include <stdio.h>
-#include "Interface.h"
+#include "replication_service.h"
+#include "queue.h"
 
-ReplicationService initRepl();
-
-int main()
-{
-    int dataSize = 5;
+int main() {
+    // Poziv funkcija iz interfejsa
+   /* int dataSize = 5;
     void* data = &dataSize;
 
-    ReplicationService service = initRepl();
+    ReceiveData(data, dataSize);*/
+    Queue* q = createQueue();
 
-    service.receiveData(data, dataSize);
+    enqueue(q, 1);
+    enqueue(q, 2);
+    enqueue(q, 3);
+
+    printf("%d ", dequeue(q));
+    printf("%d ", dequeue(q));
+    printf("%d\n", dequeue(q));
 
     return 0;
-}
-
-ReplicationService initRepl() {
-    ReplicationService service;
-
-    service.receiveData = ReceiveData;
-    service.registerService = RegisterService;
-    service.sendData = SendData;
-
-    return service;
 }

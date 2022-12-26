@@ -139,8 +139,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Replikator.cpp" />
-    <ClCompile Include="Interface.cpp" />
+    <ClCompile Include="Interface.c" />
+    <ClCompile Include="Replikator.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Interface.h" />

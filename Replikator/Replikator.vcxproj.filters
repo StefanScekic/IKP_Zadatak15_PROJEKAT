@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Replikator.cpp">
+    <ClCompile Include="Interface.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Interface.cpp">
+    <ClCompile Include="Replikator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

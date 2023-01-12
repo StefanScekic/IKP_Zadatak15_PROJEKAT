@@ -2,7 +2,6 @@
 
 TODO:
 - [ ] Struktura Procesa i Replikatora 
-- [ ] Common modeli za razmenu podataka
 - [ ] Konekcija replikatora i procesa preko soketa
   - [ ] Odabir porta za otvaranje soketa 
   - [ ] Razmena podataka 

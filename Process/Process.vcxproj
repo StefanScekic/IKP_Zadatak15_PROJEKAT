@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{9b35cf7f-29f3-4290-9fb1-da74173d992b}</ProjectGuid>
-    <RootNamespace>Replikator</RootNamespace>
+    <ProjectGuid>{7e62ec4d-8cd4-460a-818d-9dcfbbffdfde}</ProjectGuid>
+    <RootNamespace>Process</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -140,13 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="queue.c" />
-    <ClCompile Include="replication_service.c" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="queue.h" />
-    <ClInclude Include="replication_service.h" />
+    <ClCompile Include="main.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

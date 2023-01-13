@@ -1,9 +1,16 @@
-#include <stdio.h>
+#include "../Common/Includes.h"
 #include "../Common/Connection.h"
+#include "../Common/SQueue.h"
 
 #define DEFAULT_BUFLEN 512
+#define THREAD_POOL_SIZE 20
+
+HANDLE threadPool[THREAD_POOL_SIZE];
+CRITICAL_SECTION cs;
 
 DWORD WINAPI handle_connection(LPVOID client_socket);
+DWORD WINAPI thread_function(LPVOID arg);
+
 
 int main() {
     if (InitializeWindowsSockets() == false)
@@ -11,6 +18,9 @@ int main() {
         return 1;
     }
 
+    InitializeCriticalSection(&cs);
+
+    //Sockets init
     SOCKET server_socket = INVALID_SOCKET;
     SOCKET client_socket = INVALID_SOCKET;
     SA_IN server_addr, client_addr;
@@ -24,6 +34,12 @@ int main() {
         WSACleanup();
         return 1; 
     }    
+
+    //Create the thread pool
+    int i = 0;
+    for (i = 0; i < THREAD_POOL_SIZE; i++) {
+        threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
+    }
 
     //init the address struct
     server_addr.sin_family = AF_INET;
@@ -73,13 +89,22 @@ int main() {
         //Handle the connection
         SOCKET *pclient = (SOCKET*)malloc(sizeof(SOCKET));
         *pclient = client_socket;
-        HANDLE t;
-        t = CreateThread(NULL, 0, &handle_connection, pclient, 0, 0);
-        //handle_connection(pclient); //used for thread testing
+
+        EnterCriticalSection(&cs);
+        enqueue(pclient);
+        LeaveCriticalSection(&cs);
+
+        //HANDLE t;
+        //t = CreateThread(NULL, 0, &handle_connection, pclient, 0, 0);
 
     } //while
 
     //Clean-up
+    for (i = 0; i < THREAD_POOL_SIZE; i++) {
+        CloseHandle(threadPool[i]);
+    }
+
+    DeleteCriticalSection(&cs);
     closesocket(server_socket);
     WSACleanup();
     return 0;
@@ -95,15 +120,16 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
 
     while ((iResult = recv(cs, recvbuf + msgSize, sizeof(recvbuf) - msgSize - 1, 0)) > 0) {
         msgSize += iResult;
-        if (msgSize > DEFAULT_BUFLEN - 1 || recvbuf[msgSize - 1] == '\n')
+        if (msgSize > DEFAULT_BUFLEN - 1 || recvbuf[msgSize-1] == '\n') //Izmeniti kad bude trebalo
             break;
     }
 
     if (iResult < 0) {
         printf("recv failed with error: %d\n", WSAGetLastError());
         closesocket(cs);
+        return -1;
     }
-    recvbuf[msgSize - 1] = '\0';
+    recvbuf[msgSize] = '\0';
 
     printf("REQUEST: %s\n", recvbuf);
     _flushall();
@@ -117,6 +143,23 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
         printf("Close socket failed with error : %d", WSAGetLastError());
 
     printf("Connection with client closed.\n");
+
+    return 0;
+}
+
+DWORD WINAPI thread_function(LPVOID arg) {
+    while (true) {
+        Sleep(100); //Privremeno dok ne implementiram semafor
+
+        EnterCriticalSection(&cs);
+        SOCKET* pclient = dequeue();
+        LeaveCriticalSection(&cs);
+
+        if (pclient != NULL) {
+            //Conenction found
+            handle_connection(pclient);
+        }
+    }
 
     return 0;
 }

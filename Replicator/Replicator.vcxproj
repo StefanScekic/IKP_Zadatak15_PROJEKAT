@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{9b35cf7f-29f3-4290-9fb1-da74173d992b}</ProjectGuid>
+    <ProjectGuid>{8CFDCDA0-539C-42A7-ADD0-E66CF8E0FABC}</ProjectGuid>
     <RootNamespace>Replikator</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>Replicator</ProjectName>

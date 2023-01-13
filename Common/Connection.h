@@ -4,8 +4,10 @@
 
 #include <stdio.h>
 #include <WS2tcpip.h>
+#include <windows.h>
 //Dodaje dependancy u podesavanje svakog projekta koji ovo includuje
 #pragma comment(lib, "Ws2_32.lib")
+//#pragma comment(lib, "winmm.lib")
 
 /*
 	Default server port used for testing.
@@ -18,7 +20,7 @@
 /*
 	Represents the maximum length of the queue of pending connections.
 */
-#define SERVER_BACKLOG 20
+#define SERVER_BACKLOG 100
 
 typedef struct sockaddr_in SA_IN;
 typedef struct sockaddr SA;

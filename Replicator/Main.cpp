@@ -3,7 +3,7 @@
 
 #define DEFAULT_BUFLEN 512
 
-void handle_connection(SOCKET *client_socket);
+DWORD WINAPI handle_connection(LPVOID client_socket);
 
 int main() {
     if (InitializeWindowsSockets() == false)
@@ -67,10 +67,15 @@ int main() {
         }
         else {
             printf("Connected!\n");
+            //printf("%d\n\n", client_socket); //DEBUGG
         }
 
         //Handle the connection
-        handle_connection(&client_socket);
+        SOCKET *pclient = (SOCKET*)malloc(sizeof(SOCKET));
+        *pclient = client_socket;
+        HANDLE t;
+        t = CreateThread(NULL, 0, &handle_connection, pclient, 0, 0);
+        //handle_connection(pclient); //used for thread testing
 
     } //while
 
@@ -80,31 +85,38 @@ int main() {
     return 0;
 }
 
-void handle_connection(SOCKET *client_socket) {
+DWORD WINAPI handle_connection(LPVOID client_socket) {
     int iResult;
+    int msgSize = 0;
     char recvbuf[DEFAULT_BUFLEN];
 
-    do
-    {
-        // Receive data until the client shuts down the connection
-        iResult = recv(*client_socket, recvbuf, DEFAULT_BUFLEN, 0);
-        if (iResult > 0)
-        {
-            printf("Message received from client: %s.\n", recvbuf);
-        }
-        else if (iResult == 0)
-        {
-            // connection was closed gracefully
-            printf("Connection with client closed.\n");
-            closesocket(*client_socket);
-        }
-        else
-        {
-            // there was an error during recv
-            printf("recv failed with error: %d\n", WSAGetLastError());
-            closesocket(*client_socket);
-        }
-    } while (iResult > 0);
+    SOCKET cs = *((SOCKET*)client_socket);
+    free(client_socket);
 
-    return;
+    while ((iResult = recv(cs, recvbuf + msgSize, sizeof(recvbuf) - msgSize - 1, 0)) > 0) {
+        msgSize += iResult;
+        if (msgSize > DEFAULT_BUFLEN - 1 || recvbuf[msgSize - 1] == '\n')
+            break;
+    }
+
+    if (iResult < 0) {
+        printf("recv failed with error: %d\n", WSAGetLastError());
+        closesocket(cs);
+    }
+    recvbuf[msgSize - 1] = '\0';
+
+    printf("REQUEST: %s\n", recvbuf);
+    _flushall();
+
+    //Sleep(1000); //Used for thread testing purposes
+
+    const char* odgovor = "odgovor";
+    iResult = send(cs, odgovor, strlen(odgovor), 0);
+
+    if (closesocket(cs) == SOCKET_ERROR)
+        printf("Close socket failed with error : %d", WSAGetLastError());
+
+    printf("Connection with client closed.\n");
+
+    return 0;
 }

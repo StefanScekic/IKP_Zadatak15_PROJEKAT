@@ -1,8 +1,8 @@
 # IKP_Zadatak15_PROJEKAT
 
 TODO:
-- [ ] Struktura Procesa i Replikatora 
-- [ ] Konekcija replikatora i procesa preko soketa
+- [X] Struktura Procesa i Replikatora 
+- [X] Konekcija replikatora i procesa preko soketa
   - [ ] Odabir porta za otvaranje soketa 
   - [ ] Razmena podataka 
   - [ ] Rad kao asinhroni Thread

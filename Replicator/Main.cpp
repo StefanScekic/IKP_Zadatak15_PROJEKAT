@@ -7,18 +7,37 @@
 
 HANDLE threadPool[THREAD_POOL_SIZE];
 CRITICAL_SECTION cs;
+HANDLE semafore;
 
 DWORD WINAPI handle_connection(LPVOID client_socket);
 DWORD WINAPI thread_function(LPVOID arg);
 
+int counter = 0;
+int condition = 0;
+
+BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
+    if (dwCtrlType == CTRL_C_EVENT) {
+        printf("CTRL+C received! Exiting the loop...\n");
+        condition = 1;
+        return TRUE;
+    }
+    return FALSE;
+}
 
 int main() {
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    int i = 0;
+
     if (InitializeWindowsSockets() == false)
     {
         return 1;
     }
 
     InitializeCriticalSection(&cs);
+    semafore = CreateSemaphore(0, 0, 4096, NULL);
+
+    fd_set current_sockets, ready_sockets;
+    FD_ZERO(&current_sockets);
 
     //Sockets init
     SOCKET server_socket = INVALID_SOCKET;
@@ -35,11 +54,6 @@ int main() {
         return 1; 
     }    
 
-    //Create the thread pool
-    int i = 0;
-    for (i = 0; i < THREAD_POOL_SIZE; i++) {
-        threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
-    }
 
     //init the address struct
     server_addr.sin_family = AF_INET;
@@ -66,37 +80,64 @@ int main() {
         return 1;
     }
 
+    unsigned long int nonBlockingMode = 1;
+    ioctlsocket(server_socket, FIONBIO, &nonBlockingMode);
+
+    FD_SET(server_socket, &current_sockets);
+
+    //Create the thread pool
+    
+    for (i = 0; i < THREAD_POOL_SIZE; i++) {
+        threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
+    }
+
     while (true) {
+        ready_sockets = current_sockets;
         printf("Waiting for connections...\n");
 
         //Wait and accept an incoming connection
         //Addr_size changes with each accept, so a reset is needed
         addr_size = sizeof(SA_IN);
 
-        client_socket = accept(server_socket, (SA*)&client_addr, (socklen_t*)&addr_size);
-        if (client_socket == INVALID_SOCKET) {
+        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL) < 0) {
             printf("Client socket accept failed, error code : %d", WSAGetLastError());
-
-            closesocket(server_socket);
-            WSACleanup();
-            return 1;
-        }
-        else {
-            printf("Connected!\n");
-            //printf("%d\n\n", client_socket); //DEBUGG
+            break;
         }
 
-        //Handle the connection
-        SOCKET *pclient = (SOCKET*)malloc(sizeof(SOCKET));
-        *pclient = client_socket;
+        for (i = 0; i < FD_SETSIZE; i++) {
+            if (FD_ISSET(i, &ready_sockets)) {
+                if (i == server_socket) {
+                    //this is a new connection
+                    client_socket = accept(server_socket, (SA*)&client_addr, (socklen_t*)&addr_size);
+                    if (client_socket == INVALID_SOCKET) {
+                        printf("Client socket accept failed, error code : %d", WSAGetLastError());
 
-        EnterCriticalSection(&cs);
-        enqueue(pclient);
-        LeaveCriticalSection(&cs);
+                        break;
+                    }
+                    else {
+                        printf("Connected!\n");
+                        FD_SET(client_socket, &current_sockets);
+                    }
+                }
+                else
+                {
+                    //Handle the connection
+                    SOCKET *pclient = (SOCKET*)malloc(sizeof(SOCKET));
+                    *pclient = i;
 
-        //HANDLE t;
-        //t = CreateThread(NULL, 0, &handle_connection, pclient, 0, 0);
+                    EnterCriticalSection(&cs);
+                    enqueue(pclient);
+                    ReleaseSemaphore(semafore, 1, NULL);
+                    LeaveCriticalSection(&cs);
 
+                    FD_CLR(i, &current_sockets);
+                }
+            }
+        }
+
+        if (condition) {
+            break;
+        }
     } //while
 
     //Clean-up
@@ -106,7 +147,11 @@ int main() {
 
     DeleteCriticalSection(&cs);
     closesocket(server_socket);
+    CloseHandle(semafore);
     WSACleanup();
+
+    printf("\n%d\n", counter);
+
     return 0;
 }
 
@@ -132,7 +177,7 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
     recvbuf[msgSize] = '\0';
 
     printf("REQUEST: %s\n", recvbuf);
-    _flushall();
+    //_flushall();
 
     //Sleep(1000); //Used for thread testing purposes
 
@@ -143,17 +188,25 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
         printf("Close socket failed with error : %d", WSAGetLastError());
 
     printf("Connection with client closed.\n");
+    counter++;
+    _flushall();
 
     return 0;
 }
 
 DWORD WINAPI thread_function(LPVOID arg) {
     while (true) {
-        Sleep(100); //Privremeno dok ne implementiram semafor
+        SOCKET* pclient;
 
         EnterCriticalSection(&cs);
-        SOCKET* pclient = dequeue();
-        LeaveCriticalSection(&cs);
+        if ((pclient = dequeue()) == NULL) {
+            LeaveCriticalSection(&cs);
+            WaitForSingleObject(semafore, INFINITE);
+        }
+        else
+        {
+            LeaveCriticalSection(&cs);
+        }
 
         if (pclient != NULL) {
             //Conenction found

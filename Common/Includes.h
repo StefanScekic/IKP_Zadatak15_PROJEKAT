@@ -1,5 +1,6 @@
 #pragma once
 
+#define FD_SETSIZE 1024
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include <stdio.h>

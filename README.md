@@ -10,6 +10,8 @@ TODO:
   - [ ] Izbacivanje procesa iz liste pri gasenju konekcije 
 
   Kao ChangeLog:
-  1.0
+  V1.0
   - Napravljen serverski soket koji radi u sopstvenoj niti i asinhrono obradjuje zahteve
   - Gracefull shutdown u ovoj verziji postignut
+  V1.1
+  - MASIVAN CodeClean-up

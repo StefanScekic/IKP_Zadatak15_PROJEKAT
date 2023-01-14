@@ -4,7 +4,12 @@ TODO:
 - [X] Struktura Procesa i Replikatora 
 - [X] Konekcija replikatora i procesa preko soketa
   - [ ] Odabir porta za otvaranje soketa 
-  - [ ] Razmena podataka 
-  - [ ] Rad kao asinhroni Thread
+  - [X] Razmena podataka 
+  - [X] Rad kao asinhroni Thread
 - [ ] Registracija procesa
   - [ ] Izbacivanje procesa iz liste pri gasenju konekcije 
+
+  Kao ChangeLog:
+  1.0
+  - Napravljen serverski soket koji radi u sopstvenoj niti i asinhrono obradjuje zahteve
+  - Gracefull shutdown u ovoj verziji postignut

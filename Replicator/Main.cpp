@@ -2,157 +2,195 @@
 #include "../Common/Connection.h"
 #include "../Common/SQueue.h"
 
-#define DEFAULT_BUFLEN 512
+#define DEFAULT_BUFLEN 4096
 #define THREAD_POOL_SIZE 20
 
-HANDLE threadPool[THREAD_POOL_SIZE];
+HANDLE threadPool[THREAD_POOL_SIZE];    //thread pool
+HANDLE as_thread;
 CRITICAL_SECTION cs;
-HANDLE semafore;
+HANDLE semafore, interrupt_semaphore, sinterrupt_main;  //semafori
+SOCKET server_socket = INVALID_SOCKET;
+fd_set current_sockets, ready_sockets;
 
 DWORD WINAPI handle_connection(LPVOID client_socket);
 DWORD WINAPI thread_function(LPVOID arg);
+DWORD WINAPI accept_connections_thread_function(LPVOID arg);
+SOCKET server_setup(int server_port, int backlog);
+void CleanUp();
 
-int counter = 0;
-int condition = 0;
+int counter = 0; //Used for checking if all conections are handled
+
 
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
     if (dwCtrlType == CTRL_C_EVENT) {
-        printf("CTRL+C received! Exiting the loop...\n");
-        condition = 1;
+        printf("CTRL+C received! Exiting the program...\n");
+        ReleaseSemaphore(sinterrupt_main, 1, NULL);
         return TRUE;
     }
     return FALSE;
 }
 
 int main() {
-    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    #pragma region Inits
     int i = 0;
 
+    semafore = CreateSemaphore(NULL, 0, 4096, NULL);
+    interrupt_semaphore = CreateSemaphore(NULL, 0, THREAD_POOL_SIZE, NULL);
+    sinterrupt_main = CreateSemaphore(NULL, 0, 1, NULL);
+    InitializeCriticalSection(&cs);
+
+    //Create the thread pool    
+    for (i = 0; i < THREAD_POOL_SIZE; i++) {
+        threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
+        if (threadPool[i] == NULL) {
+            printf("CreateThread failed with error code: %d\n", GetLastError());
+            exit(1);
+        }
+    }
+
+
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
     if (InitializeWindowsSockets() == false)
     {
         return 1;
     }
 
-    InitializeCriticalSection(&cs);
-    semafore = CreateSemaphore(0, 0, 4096, NULL);
-
-    fd_set current_sockets, ready_sockets;
     FD_ZERO(&current_sockets);
-
-    //Sockets init
-    SOCKET server_socket = INVALID_SOCKET;
-    SOCKET client_socket = INVALID_SOCKET;
-    SA_IN server_addr, client_addr;
-    int addr_size;
+    #pragma endregion
     
+    //Setup server
+    server_socket = server_setup(SERVERPORT, SERVER_BACKLOG);
+    if (server_socket == -1)
+        CleanUp();
+
+    FD_SET(server_socket, &current_sockets);
+
+    //Main Accept incoming connections thread
+    if ((as_thread = CreateThread(NULL, 0, accept_connections_thread_function, NULL, 0, 0)) == NULL) {
+        printf("CreateThread failed with error code: %d\n", GetLastError());
+    }
+    
+    //End program interrup signal
+    WaitForSingleObject(sinterrupt_main, INFINITE);
+
+    CleanUp();
+
+    return 0;
+}
+
+DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
+    int i = 0;
+    int addr_size;
+    SOCKET client_socket = INVALID_SOCKET;    
+    SA_IN client_addr;
+
+    //Main while loop
+    printf("Waiting for connections...\n");
+    while (true) {
+        //Wait and accept an incoming connection
+        //Addr_size changes with each accept, so a reset is needed
+        addr_size = sizeof(SA_IN);
+        ready_sockets = current_sockets;
+
+        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL) < 0) {
+            printf("Client socket select failed, error code : %d\n", WSAGetLastError());
+            return -1;
+        }
+
+        //Check if there are sockets ready for processing
+        for (i = 0; i < ready_sockets.fd_count; i++) {
+            if (ready_sockets.fd_array[i] == server_socket) {
+                //This is a new connection
+                client_socket = accept(server_socket, (SA*)&client_addr, (socklen_t*)&addr_size);
+
+                if (client_socket == INVALID_SOCKET) {
+                    printf("Client socket accept failed, error code : %d\n", WSAGetLastError());
+                    return -2;
+                }
+                else {
+                    printf("Connected!\n");
+                    FD_SET(client_socket, &current_sockets);
+                }
+            }
+            else
+            {
+                //Handle the connection
+                printf("Handle the connection!\n");
+                SOCKET* pclient = (SOCKET*)malloc(sizeof(SOCKET));
+                *pclient = ready_sockets.fd_array[i];
+
+                EnterCriticalSection(&cs);
+                enqueue(pclient);
+                ReleaseSemaphore(semafore, 1, NULL);
+                LeaveCriticalSection(&cs);
+
+                FD_CLR(ready_sockets.fd_array[i], &current_sockets);
+            }
+        }
+    } //while
+}
+
+SOCKET server_setup(int server_port, int backlog) {
+    SA_IN server_addr;
+
     //Server socket creation
     server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_socket == INVALID_SOCKET) {
         printf("Server socket creation failed, error code : %d", WSAGetLastError());
-
-        WSACleanup();
-        return 1; 
-    }    
-
+        return -1;
+    }
 
     //init the address struct
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(SERVERPORT);
+    server_addr.sin_port = htons(server_port);
 
     //Bind socket
     bind(server_socket, (SA*)&server_addr, sizeof(server_addr));
     if (server_socket == SOCKET_ERROR) {
         printf("Server socket binding failed, error code : %d", WSAGetLastError());
-
-        closesocket(server_socket);
-        WSACleanup();
-        return 1;
+        return -1;
     }
 
-    //Set socket to listen mode
-    listen(server_socket, SERVER_BACKLOG);
-    if (server_socket == SOCKET_ERROR) {
-        printf("Server socket listen mode failed, error code : %d", WSAGetLastError());
-
-        closesocket(server_socket);
-        WSACleanup();
-        return 1;
-    }
-
+    //Set nonblocking mode
     unsigned long int nonBlockingMode = 1;
     ioctlsocket(server_socket, FIONBIO, &nonBlockingMode);
 
-    FD_SET(server_socket, &current_sockets);
-
-    //Create the thread pool
-    
-    for (i = 0; i < THREAD_POOL_SIZE; i++) {
-        threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
+    //Set socket to listen mode
+    listen(server_socket, backlog);
+    if (server_socket == SOCKET_ERROR) {
+        printf("Server socket listen mode failed, error code : %d", WSAGetLastError());
+        return -1;
     }
 
-    while (true) {
-        ready_sockets = current_sockets;
-        printf("Waiting for connections...\n");
+    return server_socket;
+}
 
-        //Wait and accept an incoming connection
-        //Addr_size changes with each accept, so a reset is needed
-        addr_size = sizeof(SA_IN);
+void CleanUp() {
+    int i = 0;
+    printf("Cleanup started\n");
+    closesocket(server_socket);
+    if (!ReleaseSemaphore(interrupt_semaphore, THREAD_POOL_SIZE, NULL)) {
+        printf("ReleaseSemaphore error: %d\n", GetLastError());
+    }
+    /*for (i = 0; i < THREAD_POOL_SIZE; i++) {
+        ReleaseSemaphore(interrupt_semaphore, 1, NULL);
+    }*/
 
-        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL) < 0) {
-            printf("Client socket accept failed, error code : %d", WSAGetLastError());
-            break;
-        }
-
-        for (i = 0; i < FD_SETSIZE; i++) {
-            if (FD_ISSET(i, &ready_sockets)) {
-                if (i == server_socket) {
-                    //this is a new connection
-                    client_socket = accept(server_socket, (SA*)&client_addr, (socklen_t*)&addr_size);
-                    if (client_socket == INVALID_SOCKET) {
-                        printf("Client socket accept failed, error code : %d", WSAGetLastError());
-
-                        break;
-                    }
-                    else {
-                        printf("Connected!\n");
-                        FD_SET(client_socket, &current_sockets);
-                    }
-                }
-                else
-                {
-                    //Handle the connection
-                    SOCKET *pclient = (SOCKET*)malloc(sizeof(SOCKET));
-                    *pclient = i;
-
-                    EnterCriticalSection(&cs);
-                    enqueue(pclient);
-                    ReleaseSemaphore(semafore, 1, NULL);
-                    LeaveCriticalSection(&cs);
-
-                    FD_CLR(i, &current_sockets);
-                }
-            }
-        }
-
-        if (condition) {
-            break;
-        }
-    } //while
-
-    //Clean-up
+    WaitForMultipleObjects(THREAD_POOL_SIZE, threadPool, TRUE, INFINITE);
     for (i = 0; i < THREAD_POOL_SIZE; i++) {
         CloseHandle(threadPool[i]);
     }
 
     DeleteCriticalSection(&cs);
-    closesocket(server_socket);
+
+    CloseHandle(as_thread);
     CloseHandle(semafore);
+    CloseHandle(interrupt_semaphore);
+
     WSACleanup();
 
     printf("\n%d\n", counter);
-
-    return 0;
 }
 
 DWORD WINAPI handle_connection(LPVOID client_socket) {
@@ -177,7 +215,6 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
     recvbuf[msgSize] = '\0';
 
     printf("REQUEST: %s\n", recvbuf);
-    //_flushall();
 
     //Sleep(1000); //Used for thread testing purposes
 
@@ -185,23 +222,25 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
     iResult = send(cs, odgovor, strlen(odgovor), 0);
 
     if (closesocket(cs) == SOCKET_ERROR)
-        printf("Close socket failed with error : %d", WSAGetLastError());
+        printf("Close socket failed with error : %d\n", WSAGetLastError());
 
     printf("Connection with client closed.\n");
     counter++;
-    _flushall();
 
     return 0;
 }
 
 DWORD WINAPI thread_function(LPVOID arg) {
+    SOCKET* pclient;
+    HANDLE semaphores[2] = { semafore, interrupt_semaphore };
+
     while (true) {
-        SOCKET* pclient;
 
         EnterCriticalSection(&cs);
         if ((pclient = dequeue()) == NULL) {
             LeaveCriticalSection(&cs);
-            WaitForSingleObject(semafore, INFINITE);
+            if ((WaitForMultipleObjects(2, semaphores, FALSE, INFINITE)) == (WAIT_OBJECT_0 + 1))
+                return 0;
         }
         else
         {

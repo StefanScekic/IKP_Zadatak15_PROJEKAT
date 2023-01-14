@@ -10,6 +10,6 @@ void SendData(int ServiceID, void* data, int dataSize) {
 }
 
 void ReceiveData(void* data, int dataSize) {
-    printf("Poy");
+    printf_s("Poy");
     return;
 }

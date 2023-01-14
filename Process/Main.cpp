@@ -16,7 +16,7 @@ int main() {
     //Client socket creation
     client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(client_socket == INVALID_SOCKET) {
-        printf("Client socket creation failed, error code : %d", WSAGetLastError());
+        printf_s("Client socket creation failed, error code : %d", WSAGetLastError());
 
         WSACleanup();
         return 1;
@@ -31,7 +31,7 @@ int main() {
     // connect to server specified in serverAddress and socket connectSocket
     if (connect(client_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
     {
-        printf("Unable to connect to server.\n");
+        printf_s("Unable to connect to server.\n");
 
         closesocket(client_socket);
         WSACleanup();
@@ -43,14 +43,14 @@ int main() {
     iResult = send(client_socket, messageToSend, (int)strlen(messageToSend) + 1, 0);
     if (iResult == SOCKET_ERROR)
     {
-        printf("send failed with error: %d\n", WSAGetLastError());
+        printf_s("send failed with error: %d\n", WSAGetLastError());
 
         closesocket(client_socket);
         WSACleanup();
         return 1;
     }
 
-    printf("Bytes Sent: %ld\n", iResult);
+    printf_s("Bytes Sent: %ld\n", iResult);
 
     //Clean-up
     closesocket(client_socket);

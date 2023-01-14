@@ -19,7 +19,7 @@ SOCKET server_setup(int server_port) {
     //Server socket creation
     server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_socket == INVALID_SOCKET) {
-        printf("Server socket creation failed, error code : %d", WSAGetLastError());
+        printf_s("Server socket creation failed, error code : %d", WSAGetLastError());
         return -1;
     }
 
@@ -31,7 +31,7 @@ SOCKET server_setup(int server_port) {
     //Bind socket
     bind(server_socket, (SA*)&server_addr, sizeof(server_addr));
     if (server_socket == SOCKET_ERROR) {
-        printf("Server socket binding failed, error code : %d", WSAGetLastError());
+        printf_s("Server socket binding failed, error code : %d", WSAGetLastError());
         return -1;
     }
 
@@ -42,9 +42,11 @@ SOCKET server_setup(int server_port) {
     //Set socket to listen mode
     listen(server_socket, SERVER_BACKLOG);
     if (server_socket == SOCKET_ERROR) {
-        printf("Server socket listen mode failed, error code : %d", WSAGetLastError());
+        printf_s("Server socket listen mode failed, error code : %d", WSAGetLastError());
         return -1;
     }
+
+    printf_s("Socket listening on port %d\n", server_port);
 
     return server_socket;
 }
@@ -65,27 +67,27 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
     }
 
     if (iResult < 0) {
-        printf("recv failed with error: %d\n", WSAGetLastError());
+        printf_s("recv failed with error: %d\n", WSAGetLastError());
         closesocket(cs);
         return -1;
     }
     recvbuf[msgSize] = '\0';
 
-    printf("REQUEST: %s\n", recvbuf);
+    printf_s("REQUEST: %s\n", recvbuf);
 
     //Sleep(1000); //Used for thread testing purposes
 
     const char* odgovor = "odgovor";
     if ((send(cs, odgovor, strlen(odgovor), 0)) == SOCKET_ERROR) {
-        printf("send failed with error: %d\n", WSAGetLastError());
+        printf_s("send failed with error: %d\n", WSAGetLastError());
         closesocket(cs);
         return -1;
     }    
 
     if (closesocket(cs) == SOCKET_ERROR)
-        printf("Close socket failed with error : %d\n", WSAGetLastError());
+        printf_s("Close socket failed with error : %d\n", WSAGetLastError());
 
-    printf("Connection with client closed.\n");
+    printf_s("Connection with client closed.\n");
     counter++;
 
     return 0;
@@ -125,7 +127,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
     SA_IN client_addr;
 
     //Main while loop
-    printf("Waiting for connections...\n");
+    printf_s("Waiting for connections...\n");
     while (true) {
         //Wait and accept an incoming connection
         //Addr_size changes with each accept, so a reset is needed
@@ -133,7 +135,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
         ready_sockets = current_sockets;
 
         if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL) < 0) {
-            printf("Client socket select failed, error code : %d\n", WSAGetLastError());
+            printf_s("Client socket select failed, error code : %d\n", WSAGetLastError());
             ReleaseSemaphore(sinterrupt_main, 1, NULL);
             return -1;
         }
@@ -145,19 +147,19 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
                 client_socket = accept(server_socket, (SA*)&client_addr, (socklen_t*)&addr_size);
 
                 if (client_socket == INVALID_SOCKET) {
-                    printf("Client socket accept failed, error code : %d\n", WSAGetLastError());
+                    printf_s("Client socket accept failed, error code : %d\n", WSAGetLastError());
                     ReleaseSemaphore(sinterrupt_main, 1, NULL);
                     return -2;
                 }
                 else {
-                    printf("Connected!\n");
+                    printf_s("Connected!\n");
                     FD_SET(client_socket, &current_sockets);
                 }
             }
             else
             {
                 //Handle the connection
-                printf("Handle the connection!\n");
+                printf_s("Handle the connection!\n");
                 SOCKET* pclient = (SOCKET*)malloc(sizeof(SOCKET));
                 *pclient = ready_sockets.fd_array[i];
 
@@ -180,7 +182,7 @@ int init_tp() {
     for (i = 0; i < THREAD_POOL_SIZE; i++) {
         threadPool[i] = CreateThread(NULL, 0, thread_function, NULL, 0, 0);
         if (threadPool[i] == NULL) {
-            printf("CreateThread failed with error code: %d\n", GetLastError());
+            printf_s("CreateThread failed with error code: %d\n", GetLastError());
             return -1;
         }
     }
@@ -229,7 +231,7 @@ void init_resources(int server_port) {
 
 void cleanup(int exit_code) {
     int i = 0;
-    printf("Cleanup started\n");
+    printf_s("Cleanup started\n");
 
     switch (rollbackCounter)
     {
@@ -242,7 +244,7 @@ void cleanup(int exit_code) {
     case 4:
         //ThreadPool cleanup
         if (!ReleaseSemaphore(interrupt_semaphore, THREAD_POOL_SIZE, NULL)) {
-            printf("ReleaseSemaphore error: %d\n", GetLastError());
+            printf_s("ReleaseSemaphore error: %d\n", GetLastError());
         }
 
         WaitForMultipleObjects(THREAD_POOL_SIZE, threadPool, TRUE, INFINITE);
@@ -262,12 +264,12 @@ void cleanup(int exit_code) {
         WSACleanup();
     case 0:
         if (exit_code != ALL_GOOD) {
-            printf("\nExiting ServerAcceptSocket with exit code : %d\n", exit_code);
+            printf_s("\nExiting ServerAcceptSocket with exit code : %d\n", exit_code);
             exit(exit_code);
         }
     }    
 
-    printf("\n%d\n", counter);
+    printf_s("\n%d\n", counter);
     return;
 }
 
@@ -276,7 +278,7 @@ void boot_server_socket(int server_port) {
 
     //Main Accept incoming connections thread
     if ((as_thread = CreateThread(NULL, 0, accept_connections_thread_function, NULL, 0, 0)) == NULL) {
-        printf("CreateThread failed with error code: %d\n", GetLastError());
+        printf_s("CreateThread failed with error code: %d\n", GetLastError());
         cleanup(MT_FAIL);
     }
     else

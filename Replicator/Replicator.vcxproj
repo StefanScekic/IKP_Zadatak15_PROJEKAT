@@ -141,7 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="replication_service.c" />
+    <ClCompile Include="replication_service.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ServerSocket.cpp" />
     <ClCompile Include="SQueue.cpp" />

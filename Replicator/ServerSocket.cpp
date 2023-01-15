@@ -66,10 +66,10 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
             break;
     }
 
-    if (iResult < 0) {
+    if ((iResult < 0) && (WSAGetLastError() != WSAEWOULDBLOCK)) {
         printf_s("recv failed with error: %d\n", WSAGetLastError());
         closesocket(cs);
-        return -1;
+        return 1;
     }
     recvbuf[msgSize] = '\0';
 
@@ -77,11 +77,9 @@ DWORD WINAPI handle_connection(LPVOID client_socket) {
 
     //Sleep(1000); //Used for thread testing purposes
 
-    const char* odgovor = "odgovor";
+    const char* odgovor = "odgovor\n";
     if ((send(cs, odgovor, strlen(odgovor), 0)) == SOCKET_ERROR) {
         printf_s("send failed with error: %d\n", WSAGetLastError());
-        closesocket(cs);
-        return -1;
     }    
 
     if (closesocket(cs) == SOCKET_ERROR)
@@ -112,7 +110,7 @@ DWORD WINAPI thread_function(LPVOID arg) {
 
         if (pclient != NULL) {
             //Conenction found
-            if ((handle_connection(pclient)) < 0)
+            if ((handle_connection(pclient)) != 0)
                 cleanup(HC_FAIL);
         }
     }
@@ -174,7 +172,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
     } //while
 }
 
-//Private function to initialize ThreadPool
+//Private function used to initialize ThreadPool
 int init_tp() {
     int i = 0;
 

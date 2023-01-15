@@ -1,61 +1,22 @@
 #include <stdio.h>
 #include "../Common/Connection.h"
+#include "ClientSocket.h"
 
-#define SERVERPORT 1800
+int main(int argc, char* argv[]) {
+    int iResult = 0;
 
-int main() {
-    int iResult;
-
-    if (InitializeWindowsSockets() == false)
-    {
-        return 1;
+    if (argc > 1) {
+        printf_s("%s\n", argv[1]);
     }
 
-    SOCKET client_socket = INVALID_SOCKET;
+    init_client_sockets(1801);
 
-    //Client socket creation
-    client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(client_socket == INVALID_SOCKET) {
-        printf_s("Client socket creation failed, error code : %d", WSAGetLastError());
-
-        WSACleanup();
-        return 1;
-    }
-
-    //init the server address struct
-    SA_IN server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(SERVERPORT);
-
-    // connect to server specified in serverAddress and socket connectSocket
-    if (connect(client_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
-    {
-        printf_s("Unable to connect to server.\n");
-
-        closesocket(client_socket);
-        WSACleanup();
-        return 1;
-    }
-
-    //DO SOMETHING
-    const char* messageToSend = "kek lmao";
-    iResult = send(client_socket, messageToSend, (int)strlen(messageToSend) + 1, 0);
-    if (iResult == SOCKET_ERROR)
-    {
-        printf_s("send failed with error: %d\n", WSAGetLastError());
-
-        closesocket(client_socket);
-        WSACleanup();
-        return 1;
-    }
-
-    printf_s("Bytes Sent: %ld\n", iResult);
+    iResult = send_request(SERVERPORT);
+    handle_send_request_result((SEND_REQUEST_RESULT)iResult);
 
     //Clean-up
-    closesocket(client_socket);
-    WSACleanup();
-
     getchar();
+    cleanup(ALL_GOOD);
+
     return 0;
 }

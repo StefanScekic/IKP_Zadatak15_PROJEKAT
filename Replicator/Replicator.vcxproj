@@ -141,13 +141,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="replication_service.cpp" />
+    <ClCompile Include="HashTable.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ServerSocket.cpp" />
     <ClCompile Include="SQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="replication_service.h" />
+    <ClInclude Include="HashTable.h" />
     <ClInclude Include="ServerSocket.h" />
     <ClInclude Include="SQueue.h" />
   </ItemGroup>

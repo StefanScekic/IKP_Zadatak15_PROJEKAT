@@ -51,13 +51,14 @@ SOCKET server_setup(int server_port) {
     return server_socket;
 }
 
-DWORD WINAPI handle_connection(LPVOID client_socket) {
+int handle_connection(SOCKET *client_socket) {
     int iResult;
     int msgSize = 0;
     char recvbuf[DEFAULT_BUFLEN];
 
-    SOCKET cs = *((SOCKET*)client_socket);
+    SOCKET cs = *client_socket;
     free(client_socket);
+    client_socket = NULL;
 
     //Recieve msg untill buffer length is exceeded or full msg is recieved
     while ((iResult = recv(cs, recvbuf + msgSize, sizeof(recvbuf) - msgSize - 1, 0)) > 0) {

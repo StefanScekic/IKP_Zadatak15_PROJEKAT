@@ -11,9 +11,15 @@ enum RequestCode
 
 typedef struct Request {
 	RequestCode code;
-	char data[MESSAGE_DATA_LENGTH];
-} REQUEST;
+	char *data;
+} request;
+
+typedef struct process {
+	int ID;
+	u_long address;
+	u_short port;
+} process;
 
 void register_service(int service_id);
 
-void send_data(int service_id, void* data, int data_size);
+void send_data(int service_id, void *data, int data_size);

@@ -6,12 +6,14 @@
 enum RequestCode
 {
 	RegisterService = 100,
-	SendData = 101
+	SendData = 101,
+	ReceiveData = 102
 };
 
 typedef struct Request {
 	RequestCode code;
 	char *data;
+	u_int data_size;
 } request;
 
 typedef struct process {
@@ -20,6 +22,8 @@ typedef struct process {
 	u_short port;
 } process;
 
-void register_service(int service_id);
-
-void send_data(int service_id, void *data, int data_size);
+typedef struct service_interface {
+	void (*register_service)(int service_id);
+	void (*send_data)(int service_id, void *data, int data_size);
+	void (*receive_data)(void* data, int data_size);
+} service_interface;

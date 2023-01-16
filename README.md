@@ -6,12 +6,12 @@ TODO:
   - [X] Odabir porta za otvaranje soketa 
   - [X] Razmena podataka 
   - [X] Rad kao asinhroni Thread
-- [ ] Slanje zahteva Replikatoru
+- [X] Slanje zahteva Replikatoru
+- [ ] Obrada zahteva
 - [ ] Proces : Primanje podataka od replikatora
-- [ ] Podrska za obradu zahteva 
 - [ ] Registracija procesa
   - [ ] Izbacivanje procesa iz liste pri gasenju konekcije 
-  - [ ] Struktura za skladistenje registrovanih procesa
+  - [X] Struktura za skladistenje registrovanih procesa
   - [ ] Provera postojanja procesa
 - [ ] Konekcija izmedju 2 Replikatora
 - [ ] Dinamicki niz za replikaciju
@@ -26,3 +26,6 @@ TODO:
     - Odabir porta implementiran
   + V1.1
     - Implementiran request socket za klijenta i slanje poruka
+  + V1.2
+    - Implementirana hash tabela za skaldistenje procesa
+    - Kreirana podrska za obradu zahteva na strani replikatora

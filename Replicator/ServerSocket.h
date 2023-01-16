@@ -1,10 +1,12 @@
 #pragma once
 #include "../Common/Connection.h"
+#include "../Common/RequestInterface.h"
+#include "SQueue.h"
+#include "ReplicationService.h"
 
 #ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
 
-#define DEFAULT_BUFLEN 4096
 #define THREAD_POOL_SIZE 20
 /*
 	Represents the maximum length of the queue of pending connections.

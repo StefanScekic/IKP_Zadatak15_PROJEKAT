@@ -9,6 +9,7 @@
 	Default server address, localhost.
 */
 #define DEFAULT_ADDRESS "127.0.0.1"
+#define DEFAULT_BUFLEN 4096
 
 typedef struct sockaddr_in SA_IN;
 typedef struct sockaddr SA;

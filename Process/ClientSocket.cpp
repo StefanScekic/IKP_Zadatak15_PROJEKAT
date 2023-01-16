@@ -1,4 +1,5 @@
 #include "ClientSocket.h"
+#include "ProcessService.h"
 
 SOCKET send_request_socket = INVALID_SOCKET; //Socket used for sending requests to Replicator
 int rollbackCounter = 0; //Counter used for clean up
@@ -31,8 +32,9 @@ void init_client_sockets(int client_port) {
 }
 
 SEND_REQUEST_RESULT send_request(int server_port) {
-    char recvbuf[512];
+    char buffer[DEFAULT_BUFLEN];
     int iResult = 0;
+
     //init the server address struct
     SA_IN server_addr;
     server_addr.sin_family = AF_INET;
@@ -46,8 +48,14 @@ SEND_REQUEST_RESULT send_request(int server_port) {
     }
 
     //DO SOMETHING
-    const char* messageToSend = "kek lmao\n";
-    iResult = send(send_request_socket, messageToSend, (int)strlen(messageToSend) + 1, 0);
+    request req;
+    req.code = SendData;
+    req.data = (char*)"Moja prva porukica hihi\n";
+    req.data_size = strlen(req.data);
+
+    sprintf_s(buffer, "%d %d %s", req.code, req.data_size, req.data);
+
+    iResult = send(send_request_socket, buffer, strlen(buffer), 0);
     if (iResult == SOCKET_ERROR)
     {
         return SEND_FAIL;
@@ -56,17 +64,17 @@ SEND_REQUEST_RESULT send_request(int server_port) {
     printf_s("Bytes Sent: %ld\n", iResult);
 
     //Recieve msg untill buffer length is exceeded or full msg is recieved
-    while ((iResult = recv(send_request_socket, recvbuf, sizeof(recvbuf), 0)) > 0) {
-        if (recvbuf[iResult - 1] == '\n') //Izmeniti kad bude trebalo
+    while ((iResult = recv(send_request_socket, buffer, sizeof(buffer), 0)) > 0) {
+        if (buffer[iResult - 1] == '\n') //Izmeniti kad bude trebalo
             break;
     }
 
     if ((iResult < 0) && (WSAGetLastError() != WSAEWOULDBLOCK)) {
         return NO_RESPONSE;
     }
-    recvbuf[iResult] = '\0';
+    buffer[iResult] = '\0';
 
-    printf_s("RESPONSE: %s\n", recvbuf);
+    printf_s("RESPONSE: %s\n", buffer);
 
     return SUC;
 }

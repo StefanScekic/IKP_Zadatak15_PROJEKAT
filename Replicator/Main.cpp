@@ -3,12 +3,13 @@
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType);
 
 int main() {
-    int port = SERVERPORT;
+    u_int port = SERVERPORT;
     //CTRL interupt init
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
-    printf_s("Server starting up...\nChoose a port : ");
-    scanf_s("%d", &port);   //I'm not protectiong this from invalid inputs
+    //printf_s("Server starting up...\nChoose a port : ");
+    //scanf_s("%d", &port);   //I'm not protectiong this from invalid inputs
+    
     //Start the server socket
     boot_server_socket(port);
 

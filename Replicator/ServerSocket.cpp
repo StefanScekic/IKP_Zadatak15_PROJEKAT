@@ -1,5 +1,4 @@
 #include "ServerSocket.h"
-#include "SQueue.h"
 
 HANDLE threadPool[THREAD_POOL_SIZE];    //thread pool
 
@@ -51,10 +50,17 @@ SOCKET server_setup(int server_port) {
     return server_socket;
 }
 
+void send_response(SOCKET cs, char *answer) {
+    if ((send(cs, answer, strlen(answer), 0)) == SOCKET_ERROR) {
+        printf_s("Send failed with error: %d\n", WSAGetLastError());
+    }
+}
+
 int handle_connection(SOCKET *client_socket) {
     int iResult;
     int msgSize = 0;
-    char recvbuf[DEFAULT_BUFLEN];
+    char recvbuf[DEFAULT_BUFLEN];   
+    char databuf[DEFAULT_BUFLEN];    
 
     SOCKET cs = *client_socket;
     free(client_socket);
@@ -72,22 +78,47 @@ int handle_connection(SOCKET *client_socket) {
         closesocket(cs);
         return 1;
     }
-    recvbuf[msgSize] = '\0';
 
-    printf_s("REQUEST: %s\n", recvbuf);
+    //Parse message
+    request req;
+    iResult = sscanf(recvbuf, "%d %d %[^\n]", &req.code, &req.data_size, databuf);
+    req.data = (char*)malloc(req.data_size + 1);
 
-    //Sleep(1000); //Used for thread testing purposes
+    databuf[req.data_size] = '\0';
+    strncpy(req.data, databuf, req.data_size);
 
-    const char* odgovor = "odgovor\n";
-    if ((send(cs, odgovor, strlen(odgovor), 0)) == SOCKET_ERROR) {
-        printf_s("send failed with error: %d\n", WSAGetLastError());
-    }    
+    
+    printf_s("REQUEST: %d %d %s\n", req.code, req.data_size, req.data);
+    switch (req.code)
+    {
+    case RegisterService:
+        replication_service.register_service(1);
+        send_response(cs, (char*)"Registracija servisa uspesna.\n");
+
+        break;
+    case SendData:
+        replication_service.send_data(1, req.data, req.data_size);
+        send_response(cs, (char*)"Slanje podataka uspesno.\n");
+
+        break;
+    case ReceiveData:
+        replication_service.receive_data(req.data, req.data_size);
+        send_response(cs, (char*)"Primanje podataka uspesno.\n");
+
+        break;
+    default:
+        send_response(cs, (char*)"Nepoznat zahtev.\n");
+        //printf_s("REQUEST: %d %d %s\n", req.code, req.data_size, req.data);        
+        break;
+    }
 
     if (closesocket(cs) == SOCKET_ERROR)
         printf_s("Close socket failed with error : %d\n", WSAGetLastError());
 
     printf_s("Connection with client closed.\n");
     counter++;
+
+    free(req.data);
 
     return 0;
 }

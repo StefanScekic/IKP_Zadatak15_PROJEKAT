@@ -14,6 +14,25 @@ void init_hash_table() {
 	}
 }
 
+void print_table() {
+	int i = 0;
+	for (i = 0; i < TABLE_SIZE; i++) {
+		printf_s("\n %d : ", i);
+		if (hash_table[i] == NULL)
+			printf_s(" ----- ");
+		else {
+			table_node* temp = hash_table[i];
+
+			while (temp != NULL) {
+				printf_s(" {%d} ", temp->value.ID);
+				temp = temp->next;
+			}
+		}
+	}
+
+	printf_s("\n");
+}
+
 bool hash_table_insert(process p) {
 	int index = hash(p.ID);
 
@@ -28,14 +47,19 @@ bool hash_table_insert(process p) {
 	}
 	else {
 		table_node* temp = hash_table[index];
+		if (temp->value.ID == p.ID)
+			return false;
 
 		while (temp->next != NULL) {
 			temp = temp->next;
+			if (temp->value.ID == p.ID)
+				return false;
 		}
 
 		temp->next = new_node;
 	}
 
+	printf_s("HASH TABLE: insert successfull, id : %d\n", p.ID);
 	return true;
 }
 
@@ -86,5 +110,6 @@ bool hash_table_delete(int id) {
 
 	free(tmp);
 
+	printf_s("HASH TABLE: delete successfull, id : %d\n", id);
 	return true;
 }

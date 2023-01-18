@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "../Common/Connection.h"
+#include "../Common/RequestInterface.h"
 #include "ClientSocket.h"
 #include <time.h>
 
@@ -15,11 +16,11 @@ int main(int argc, char* argv[]) {
 
     init_client_sockets(1801);
 
-    iResult = send_request(SERVERPORT);
-    handle_send_request_result((SEND_REQUEST_RESULT)iResult);
+    send_request(SERVERPORT, RegisterService);
+    //getchar();
+    send_request(SERVERPORT, RegisterService);
 
     //Clean-up
-    //getchar();
     cleanup(ALL_GOOD);
 #pragma endregion
 

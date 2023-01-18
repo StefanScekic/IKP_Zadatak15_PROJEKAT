@@ -1,9 +1,13 @@
 #pragma once
 #include "../Common/Includes.h"
 #include "../Common/Connection.h"
+#include "../Common/RequestInterface.h"
 
 #ifndef CLIENT_SOKCET_H
 #define CLIENT_SOKCET_H
+
+extern SOCKET send_request_socket;
+
 
 enum ExitCode
 {
@@ -21,7 +25,7 @@ enum SEND_REQUEST_RESULT {
 
 void init_client_sockets(int client_port);
 
-SEND_REQUEST_RESULT send_request(int server_port);
+void send_request(int server_port, RequestCode code);
 
 void handle_send_request_result(SEND_REQUEST_RESULT result);
 

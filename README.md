@@ -12,9 +12,10 @@ TODO:
 - [ ] Registracija procesa
   - [ ] Izbacivanje procesa iz liste pri gasenju konekcije 
   - [X] Struktura za skladistenje registrovanih procesa
-  - [ ] Provera postojanja procesa
+  - [X] Provera postojanja procesa
 - [ ] Konekcija izmedju 2 Replikatora
 - [ ] Dinamicki niz za replikaciju
+- [ ] Dodati closesockets() koji ce da prodje korz sve current sokcete i zatvorice ih
 
   Kao ChangeLog:
   + V1.0
@@ -29,3 +30,7 @@ TODO:
   + V1.2
     - Implementirana hash tabela za skaldistenje procesa
     - Kreirana podrska za obradu zahteva na strani replikatora
+  + V1.3
+    - Print Hash Table
+    - Insert u hash table update
+    - Server sad podrzava sesiju klijenta

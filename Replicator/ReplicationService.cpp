@@ -1,6 +1,15 @@
 #include "ReplicationService.h"
 
-void register_service(int service_id) {
+void register_service(process p) {
+	if(hash_table_insert(p))
+		printf_s("Insert Successfull.\n");
+	else
+	{
+		printf_s("Insert failed.\n");
+	}
+
+	print_table();
+
 	return;
 }
 
@@ -17,3 +26,12 @@ service_interface replication_service = {
 	send_data,
 	receive_data
 };
+
+void unregister_service(int id) {
+	if(hash_table_delete(id))
+		printf_s("Delete Successfull\n");
+
+	print_table();
+
+	return;
+}

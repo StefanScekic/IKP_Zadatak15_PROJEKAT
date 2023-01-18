@@ -28,55 +28,52 @@ void init_client_sockets(int client_port) {
 
     rollbackCounter = 2;
 
-    return;
-}
-
-SEND_REQUEST_RESULT send_request(int server_port) {
-    char buffer[DEFAULT_BUFLEN];
-    int iResult = 0;
-
     //init the server address struct
     SA_IN server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(server_port);
+    server_addr.sin_port = htons(SERVERPORT);
 
     // connect to server specified in serverAddress and socket connectSocket
     if (connect(send_request_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
-    {        
-        return CON_FAIL;
+    {
+        handle_send_request_result(CON_FAIL);
+        return;
     }
+    return;
+}
+
+void send_request(int server_port, RequestCode code) {
+    
 
     //DO SOMETHING
-    request req;
-    req.code = SendData;
-    req.data = (char*)"Moja prva porukica hihi\n";
-    req.data_size = strlen(req.data);
-
-    sprintf_s(buffer, "%d %d %s", req.code, req.data_size, req.data);
-
-    iResult = send(send_request_socket, buffer, strlen(buffer), 0);
-    if (iResult == SOCKET_ERROR)
+    switch (code)
     {
-        return SEND_FAIL;
+    case RegisterService:
+        process p;
+        p.ID = 1;
+        p.address = inet_addr(DEFAULT_ADDRESS);
+        p.port = htons(8080);
+
+        process_service.register_service(p);    
+        break;
+    case SendData:
+
+        break;
+    case ReceiveData:
+
+        break;
+    case UnregisterService:
+        unregister_service();
+
+        break;
+    default:
+
+        break;
     }
 
-    printf_s("Bytes Sent: %ld\n", iResult);
-
-    //Recieve msg untill buffer length is exceeded or full msg is recieved
-    while ((iResult = recv(send_request_socket, buffer, sizeof(buffer), 0)) > 0) {
-        if (buffer[iResult - 1] == '\n') //Izmeniti kad bude trebalo
-            break;
-    }
-
-    if ((iResult < 0) && (WSAGetLastError() != WSAEWOULDBLOCK)) {
-        return NO_RESPONSE;
-    }
-    buffer[iResult] = '\0';
-
-    printf_s("RESPONSE: %s\n", buffer);
-
-    return SUC;
+    handle_send_request_result(SUC);
+    return;
 }
 
 void handle_send_request_result(SEND_REQUEST_RESULT result) {
@@ -92,7 +89,7 @@ void handle_send_request_result(SEND_REQUEST_RESULT result) {
         printf_s("Send failed with error: %d\n", WSAGetLastError());
         break;
     case CON_FAIL:
-        printf_s("Unable to connect to server.\n");
+        printf_s("Unable to connect to server, error: %d\n", WSAGetLastError());
         break;
     default:
         printf_s("Unhandled request result detected.\n");
@@ -107,6 +104,7 @@ void cleanup(int exit_code) {
     {
     case 2:
         //RequestSocket cleanup
+        send_request(SERVERPORT ,UnregisterService);
         closesocket(send_request_socket);
     case 1:
         //WSA cleanup

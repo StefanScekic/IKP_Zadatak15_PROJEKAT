@@ -17,7 +17,7 @@ int main() {
     WaitForSingleObject(sinterrupt_main, INFINITE);
 
     cleanup(ALL_GOOD);
-    getchar();
+    //getchar();
 
     return 0;
 }

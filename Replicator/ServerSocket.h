@@ -11,7 +11,7 @@
 /*
 	Represents the maximum length of the queue of pending connections.
 */
-#define SERVER_BACKLOG 100
+#define SERVER_BACKLOG 200
 
 extern HANDLE sinterrupt_main;
 

@@ -55,6 +55,14 @@ void send_response(SOCKET cs, char *answer) {
         printf_s("Send failed with error: %d\n", WSAGetLastError());
     }
 }
+void handle_unregister_service(char* data) {
+    int service_id = -1;
+    memcpy(&service_id, data, sizeof(service_id));
+
+    unregister_service(service_id);
+
+    return;
+}
 
 int handle_connection(SOCKET *client_socket) {
     int iResult;
@@ -62,63 +70,70 @@ int handle_connection(SOCKET *client_socket) {
     char recvbuf[DEFAULT_BUFLEN];   
     char databuf[DEFAULT_BUFLEN];    
 
-    SOCKET cs = *client_socket;
+    SOCKET client_s = *client_socket;
     free(client_socket);
     client_socket = NULL;
 
-    //Recieve msg untill buffer length is exceeded or full msg is recieved
-    while ((iResult = recv(cs, recvbuf + msgSize, sizeof(recvbuf) - msgSize - 1, 0)) > 0) {
-        msgSize += iResult;
-        if (msgSize > DEFAULT_BUFLEN - 1 || recvbuf[msgSize - 1] == '\n') //Izmeniti kad bude trebalo
-            break;
-    }
+    iResult = recv(client_s, recvbuf, sizeof(recvbuf), 0);
 
     if ((iResult < 0) && (WSAGetLastError() != WSAEWOULDBLOCK)) {
         printf_s("recv failed with error: %d\n", WSAGetLastError());
-        closesocket(cs);
+        
+        closesocket(client_s);
         return 1;
     }
 
     //Parse message
     request req;
-    iResult = sscanf(recvbuf, "%d %d %[^\n]", &req.code, &req.data_size, databuf);
-    req.data = (char*)malloc(req.data_size + 1);
-
-    databuf[req.data_size] = '\0';
-    strncpy(req.data, databuf, req.data_size);
+    memcpy(&req, recvbuf, iResult);
 
     
-    printf_s("REQUEST: %d %d %s\n", req.code, req.data_size, req.data);
+    printf_s("REQUEST: %d\n", req.code);
     switch (req.code)
     {
+    case UnregisterService:
+        EnterCriticalSection(&cs);
+        handle_unregister_service(req.data);
+        LeaveCriticalSection(&cs);
+
+        send_response(client_s, (char*)"Odjava uspesna.\n");
+        if (closesocket(client_s) == SOCKET_ERROR)
+            printf_s("Close socket failed with error : %d\n", WSAGetLastError());
+
+        printf_s("Connection with client closed.\n\n");
+
+        counter++;
+        return 0;
+        break;
     case RegisterService:
-        replication_service.register_service(1);
-        send_response(cs, (char*)"Registracija servisa uspesna.\n");
+        process p;
+        memcpy(&p, req.data, sizeof(process));
+
+        EnterCriticalSection(&cs);
+        replication_service.register_service(p);
+        LeaveCriticalSection(&cs);
+        send_response(client_s, (char*)"Registracija servisa obradjena.\n");
 
         break;
     case SendData:
-        replication_service.send_data(1, req.data, req.data_size);
-        send_response(cs, (char*)"Slanje podataka uspesno.\n");
+        replication_service.send_data(1, req.data, 1);
+        send_response(client_s, (char*)"Slanje podataka obradjena.\n");
 
         break;
     case ReceiveData:
-        replication_service.receive_data(req.data, req.data_size);
-        send_response(cs, (char*)"Primanje podataka uspesno.\n");
+        replication_service.receive_data(req.data, 1);
+        send_response(client_s, (char*)"Primanje podataka obradjena.\n");
 
         break;
     default:
-        send_response(cs, (char*)"Nepoznat zahtev.\n");
+        send_response(client_s, (char*)"Nepoznat zahtev.\n");
         //printf_s("REQUEST: %d %d %s\n", req.code, req.data_size, req.data);        
         break;
     }
 
-    if (closesocket(cs) == SOCKET_ERROR)
-        printf_s("Close socket failed with error : %d\n", WSAGetLastError());
-
-    printf_s("Connection with client closed.\n");
-    counter++;
-
-    free(req.data);
+    EnterCriticalSection(&cs);
+    FD_SET(client_s, &current_sockets);
+    LeaveCriticalSection(&cs);
 
     return 0;
 }
@@ -156,6 +171,10 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
     SOCKET client_socket = INVALID_SOCKET;
     SA_IN client_addr;
 
+    TIMEVAL tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 100;
+
     //Main while loop
     printf_s("Waiting for connections...\n");
     while (true) {
@@ -164,7 +183,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
         addr_size = sizeof(SA_IN);
         ready_sockets = current_sockets;
 
-        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL) < 0) {
+        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, &tv) < 0) {
             printf_s("Client socket select failed, error code : %d\n", WSAGetLastError());
             ReleaseSemaphore(sinterrupt_main, 1, NULL);
             return -1;
@@ -189,16 +208,16 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
             else
             {
                 //Handle the connection
-                printf_s("Handle the connection!\n");
+                printf_s("\nHandle the connection!\n");
                 SOCKET* pclient = (SOCKET*)malloc(sizeof(SOCKET));
                 *pclient = ready_sockets.fd_array[i];
 
                 EnterCriticalSection(&cs);
+                FD_CLR(ready_sockets.fd_array[i], &current_sockets);
                 enqueue(pclient);
-                ReleaseSemaphore(semafore, 1, NULL);
                 LeaveCriticalSection(&cs);
 
-                FD_CLR(ready_sockets.fd_array[i], &current_sockets);
+                ReleaseSemaphore(semafore, 1, NULL);
             }
         }
     } //while

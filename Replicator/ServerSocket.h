@@ -1,31 +1,29 @@
 #pragma once
 #include "../Common/Connection.h"
 #include "../Common/RequestInterface.h"
+#include "../Common/Utils.h"
 #include "SQueue.h"
 #include "ReplicationService.h"
 
 #ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
 
-#define THREAD_POOL_SIZE 20
-/*
-	Represents the maximum length of the queue of pending connections.
-*/
-#define SERVER_BACKLOG 200
+#define THREAD_POOL_SIZE 20		//Number of woker threads
+#define SERVER_BACKLOG 200		//Number of sockets that can wait for connection
 
 extern HANDLE sinterrupt_main;
 
-void boot_server_socket(int server_port);
-void cleanup(int exit_code);
+#pragma region GetSets
 
-enum ExitCode
-{
-	ALL_GOOD = 0,	//yay
-	WSA_FAIL = -1,	//WSA fail
-	SMF_FAIL = -3,	//Semaphore fail
-	TP_FAIL = -4,	//ThreadPool fail
-	SS_FAIL = -5,	//ServerSocket fail
-	MT_FAIL = -6,	//MainServerThread fail
-	HC_FAIL = -7	//HandleConnection function fail
-};
+void set_server_port(u_short port);
+u_short get_server_port();
+
+void set_replicator_port(u_short port);
+u_short get_replicator_port();
+
+#pragma endregion
+
+
+void boot_server_socket();
+void cleanup(int exit_code);
 #endif // !SERVER_SOCKET_H

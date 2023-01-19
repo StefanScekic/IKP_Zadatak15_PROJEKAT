@@ -2,16 +2,24 @@
 
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType);
 
-int main() {
-    u_int port = SERVERPORT;
+int main(int argc, char* argv[]) {    
     //CTRL interupt init
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
-    //printf_s("Server starting up...\nChoose a port : ");
-    //scanf_s("%d", &port);   //I'm not protectiong this from invalid inputs
+    //Check if there are any arguments passed to the process, if not default values will be used
+    //replicator [server_port] [replicator_port]
+    if (argc > 1) {
+        if (argc != 3) {
+            printf_s("Wrong number of arguments.\nCorrect format : .\\Replicator.exe [server_port] [replicator_port]\n");
+            return -1;
+        }
+
+        set_server_port((u_short)(strtoul(argv[1], NULL, 10)));
+        set_replicator_port((u_short)(strtoul(argv[2], NULL, 10)));
+    }
     
     //Start the server socket
-    boot_server_socket(port);
+    boot_server_socket();
 
     //End program interrup signal
     WaitForSingleObject(sinterrupt_main, INFINITE);

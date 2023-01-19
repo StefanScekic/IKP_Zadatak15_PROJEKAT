@@ -2,12 +2,10 @@
 
 table_node* hash_table[TABLE_SIZE];
 
-//Private hash function
-unsigned int hash(int id) {
-	return id % TABLE_SIZE;
-}
+unsigned int hash(int id);
 
-//Initializes the hash table 
+#pragma region PublicFunctions
+
 void init_hash_table() {
 	int i = 0;
 	for (i = 0; i < TABLE_SIZE; i++) {
@@ -15,7 +13,6 @@ void init_hash_table() {
 	}
 }
 
-//Prints all members of hash table
 void print_table() {
 	int i = 0;
 	for (i = 0; i < TABLE_SIZE; i++) {
@@ -35,12 +32,12 @@ void print_table() {
 	printf_s("\n");
 }
 
-bool hash_table_insert(process p) {
+BOOL hash_table_insert(process p) {
 	int index = hash(p.ID);
 
 	table_node* new_node = (table_node*)malloc(sizeof(table_node));
 	if (new_node == NULL)
-		return false;
+		return FALSE;
 	new_node->value = p;
 	new_node->next = NULL;
 
@@ -50,44 +47,44 @@ bool hash_table_insert(process p) {
 	else {
 		table_node* temp = hash_table[index];
 		if (temp->value.ID == p.ID)
-			return false;
+			return FALSE;
 
 		while (temp->next != NULL) {
 			temp = temp->next;
 			if (temp->value.ID == p.ID)
-				return false;
+				return FALSE;
 		}
 
 		temp->next = new_node;
 	}
 
 	printf_s("HASH TABLE: insert successfull, id : %d\n", p.ID);
-	return true;
+	return TRUE;
 }
 
-bool hash_table_lookup(int id, process *p) {
+BOOL hash_table_lookup(int id, process *p) {
 	if (p == NULL)
-		return false;
+		return FALSE;
 
 	int index = hash(id);
 	table_node* tmp = hash_table[index];
 
 	if (tmp == NULL)
-		return false;
+		return FALSE;
 
 	while ((tmp != NULL) && (tmp->value.ID != id)) {
 		tmp = tmp->next;
 	}
 
 	if (tmp == NULL) {
-		return false;
+		return FALSE;
 	}
 	*p = tmp->value;
 
-	return true;
+	return TRUE;
 }
 
-bool hash_table_delete(int id) {
+BOOL hash_table_delete(int id) {
 	int index = hash(id);
 
 	table_node* tmp = hash_table[index];
@@ -99,7 +96,7 @@ bool hash_table_delete(int id) {
 	}
 
 	if (tmp == NULL) 
-		return false;
+		return FALSE;
 
 	if (prev == NULL) {
 		//deleting the head
@@ -113,7 +110,7 @@ bool hash_table_delete(int id) {
 	free(tmp);
 
 	printf_s("HASH TABLE: delete successfull, id : %d\n", id);
-	return true;
+	return TRUE;
 }
 
 void delete_hash_table() {
@@ -125,7 +122,7 @@ void delete_hash_table() {
 			table_node* temp = hash_table[i];
 			table_node* prev = hash_table[i];
 
-			while (temp != NULL) {				
+			while (temp != NULL) {
 				temp = temp->next;
 				free(prev);
 				prev = NULL;
@@ -134,3 +131,11 @@ void delete_hash_table() {
 		}
 	}
 }
+#pragma endregion
+
+#pragma region PrivateFunctions
+
+unsigned int hash(int id) {
+	return id % TABLE_SIZE;
+}
+#pragma endregion

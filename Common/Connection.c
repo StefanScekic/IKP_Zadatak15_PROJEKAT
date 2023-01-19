@@ -1,12 +1,12 @@
 #include "Connection.h"
 
-bool InitializeWindowsSockets() {
+BOOL InitializeWindowsSockets() {
 	WSADATA wsa;
 
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         printf_s("WSAStartup failed: %d\n", WSAGetLastError());
-        return false;
+        return FALSE;
     }
-	return true;
+	return TRUE;
 }

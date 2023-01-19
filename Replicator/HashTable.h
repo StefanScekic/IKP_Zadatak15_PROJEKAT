@@ -5,7 +5,7 @@
 #ifndef HASH_TABLE_H
 #define HASH_TABLE_H
 
-#define TABLE_SIZE 10
+#define TABLE_SIZE 10		//Height of HashTable
 
 typedef struct table_node {
 	process value;
@@ -18,34 +18,39 @@ typedef struct table_node {
 void init_hash_table();
 
 /*
-	Creates a new entry in the hash table.
+	Inserts a new entry into the hash table.
 
-	Returns True if succesfull, False if not	
+	@param p:	Process to be inserted
+	@returns	TRUE if insert is successfull, FALSE if not
 */
-bool hash_table_insert(process p);
+BOOL hash_table_insert(process p);
 
 /*
 	Searches the hash table for a process with a specified id.
 
-	If successfull returns true and changes passed pointer to the process.
-
-	Othervise returns false.
+	@param id:		ID of process
+	@param out p:	structure for process to be writen to if found
+	@returns TRUE if process is found, FALSE if not
 */
-bool hash_table_lookup(int id, process* p);
+BOOL hash_table_lookup(int id, process* p);
 
 /*
-	Deletes the process entry if able to.
+	Deletes the process entry if it exists.
 
-	Returns:
-		True if successfull.
-
-		False if not.
+	@param id: ID of process
+	@returns TRUE if successfull, FALSE if not
 
 */
-bool hash_table_delete(int id);
+BOOL hash_table_delete(int id);
 
+/*
+	Frees memmory allocated by hash table.
+*/
 void delete_hash_table();
 
+/*
+	Prints the whole HashTable
+*/
 void print_table();
 #endif // !HASH_TABLE_H
 

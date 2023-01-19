@@ -30,6 +30,9 @@ service_interface replication_service = {
 void unregister_service(int id) {
 	if(hash_table_delete(id))
 		printf_s("Delete Successfull\n");
+	else {
+		printf_s("Delete Failed\n");
+	}
 
 	print_table();
 

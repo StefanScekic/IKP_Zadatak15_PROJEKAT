@@ -1,37 +1,48 @@
 #pragma once
-#include "../Common/Includes.h"
-#include "../Common/Connection.h"
-#include "../Common/RequestInterface.h"
 
 #ifndef CLIENT_SOKCET_H
 #define CLIENT_SOKCET_H
 
-extern SOCKET send_request_socket;
+#include "../Common/Includes.h"
+#include "../Common/Connection.h"
+#include "../Common/RequestInterface.h"
+#include "../Common/Utils.h"
+#include "ProcessService.h"
 
-
-enum ExitCode
-{
-	ALL_GOOD = 0,	//yay
-	WSA_FAIL = -1,	//WSA fail
-	RSC_FAIL = -2,	//Request socket creation failed
-};
-
-enum SEND_REQUEST_RESULT {
+typedef enum SEND_REQUEST_RESULT {
 	SUC = 0,			//yay
 	CON_FAIL = -1,		//Connecting to server failed
 	SEND_FAIL = -2,		//Sending request to server failed
 	NO_RESPONSE = -3
-};
+} send_request_result;
 
+#pragma region GetSet
+//Get, Set for server_port
+void set_server_port(u_short port);
+u_short get_server_port();
+
+//Get, Set for client_port
+void set_client_port(u_short port);
+u_short get_client_port();
+
+//Get, Set for process_id
 void set_process_id(int id);
+int get_process_id();
 
-void init_client_sockets(u_short *client_port, u_short *server_port);
+//Get send_request_socket
+SOCKET get_send_request_socket();
 
-void send_request(int server_port, RequestCode code);
+#pragma endregion
 
-void handle_send_request_result(SEND_REQUEST_RESULT result);
+//Rest of functions
+
+/*
+	Initializes all sockets and resources used by Process
+ */
+void init_client_sockets();
 
 void cleanup(int exit_code);
 
+void send_request(request_code code);
 
 #endif // !client_socket_H

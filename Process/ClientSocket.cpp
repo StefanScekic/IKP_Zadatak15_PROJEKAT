@@ -4,9 +4,17 @@
 SOCKET send_request_socket = INVALID_SOCKET; //Socket used for sending requests to Replicator
 SOCKET receive_data_socket = INVALID_SOCKET; //Socket used for receiving data to be replicated
 
+HANDLE rds_socket_finished;                 //Semaphore that signals receive data socket is initialized
+
 HANDLE receive_thread;
 
 int rollbackCounter = 0; //Counter used for clean up
+int process_id = 1;      //Process id, 1 by default
+
+void set_process_id(int id) {
+    process_id = id;
+    return;
+}
 
 DWORD WINAPI receive_thread_function(LPVOID arg) {
     int iResult = 0;
@@ -43,6 +51,7 @@ DWORD WINAPI receive_thread_function(LPVOID arg) {
         return -1;
     }
 
+    ReleaseSemaphore(rds_socket_finished, 1, NULL);
     printf_s("Socket listening on port %d\n", cp);
 
     //Accept connections and rcv data
@@ -106,68 +115,80 @@ int init_request_socket() {
  * 
  * @param client_port: Port on which Process will listen for incoming Data
  */
-void init_client_sockets(u_short *client_port) {
+void init_client_sockets(u_short* client_port, u_short* server_port){
     //WSA init
     if (InitializeWindowsSockets() == false)
         cleanup(WSA_FAIL);
 
     rollbackCounter = 1;
 
+    //Initialize semaphore
+    if ((rds_socket_finished = CreateSemaphore(NULL, 0, 1, NULL)) == NULL)
+        cleanup(-10);
+
+    rollbackCounter = 2;
+
     //Initialize the socket used for sending request
     if ((init_request_socket()) < 0) {
         cleanup(RSC_FAIL);
     }
 
-    rollbackCounter = 2;
+    rollbackCounter = 3;
 
     //Connect to the Replicator
     //init the server address struct
     SA_IN server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(SERVERPORT);                   //TODO dodati podrsku odabira porta replikatora
+    server_addr.sin_port = htons(*server_port);
 
     if (connect(send_request_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
     {
         handle_send_request_result(CON_FAIL);
-        cleanup(-4);
+        cleanup(CON_FAIL);
     }
 
-    rollbackCounter = 3;
+    rollbackCounter = 4;
 
     //Start the socket that listens for incoming data
     if ((receive_thread = CreateThread(NULL, 0, receive_thread_function, client_port, 0, 0)) == NULL) {
         printf_s("CreateThread failed with error code: %d\n", GetLastError());
         cleanup(-4);
     }
+    WaitForSingleObject(rds_socket_finished, INFINITE);
 
-    rollbackCounter = 4;
+    rollbackCounter = 5;
 
     return;
 }
 
 void send_request(int server_port, RequestCode code) {
+    struct sockaddr_in socket_address;
+    int socket_address_len = sizeof(socket_address);
+
+    getsockname(receive_data_socket, (struct sockaddr*)&socket_address, &socket_address_len);
     
+    u_short port = ntohs(socket_address.sin_port);
 
     //DO SOMETHING
     switch (code)
     {
-    case RegisterService:
-        process p;
-        p.ID = 1;
-        p.address = inet_addr(DEFAULT_ADDRESS);
-        p.port = htons(8080);
-
-        process_service.register_service(p);    
-        break;
     case SendData:
 
+        break;
+    case RegisterService:
+        process p;
+        p.ID = process_id;
+        p.address = inet_addr(DEFAULT_ADDRESS);
+        p.port = port;
+
+        process_service.register_service(p);    
         break;
     case ReceiveData:
 
         break;
     case UnregisterService:
-        unregister_service();
+        unregister_service(process_id);
 
         break;
     default:
@@ -205,14 +226,17 @@ void cleanup(int exit_code) {
 
     switch (rollbackCounter)
     {
-    case 4:
+    case 5:
         closesocket(receive_data_socket);
         CloseHandle(receive_thread);
+    case 4:
+        send_request(SERVERPORT, UnregisterService);
     case 3:
-        send_request(SERVERPORT ,UnregisterService);
-    case 2:
         //RequestSocket cleanup
         closesocket(send_request_socket);
+    case 2:
+        //Semaphore cleanup
+        CloseHandle(rds_socket_finished);
     case 1:
         //WSA cleanup
         WSACleanup();
@@ -221,6 +245,9 @@ void cleanup(int exit_code) {
             printf_s("\nExiting ClientSocket with exit code : %d\n", exit_code);
             exit(exit_code);
         }
+        break;
+    default:
+        printf_s("Rollback count not handled\n");
     }
 
     return;

@@ -1,7 +1,5 @@
 #include "ProcessService.h"
 
-int listen_socket_id = 0;
-
 void recieve_message() {
     char buffer[DEFAULT_BUFLEN];
     int iResult = 0;
@@ -21,7 +19,6 @@ void recieve_message() {
 }
 
 void register_service(process p) {
-    char buffer[DEFAULT_BUFLEN];
     int iResult = 0;    
 
     request req;
@@ -38,9 +35,6 @@ void register_service(process p) {
     printf_s("Bytes Sent: %ld\n", iResult);
 
     recieve_message();
-
-    listen_socket_id = p.ID;
-
 	return;
 }
 
@@ -58,14 +52,14 @@ service_interface process_service = {
 	receive_data
 };
 
-void unregister_service() {
+void unregister_service(int id) {
     int iResult = 0;
 
     request req;
     req.code = UnregisterService;
-    memcpy(req.data, &listen_socket_id, sizeof(listen_socket_id));
+    memcpy(req.data, &id, sizeof(id));
 
-    iResult = send(send_request_socket, (char*)&req, sizeof(req.code) + sizeof(listen_socket_id), 0);
+    iResult = send(send_request_socket, (char*)&req, sizeof(req.code) + sizeof(id), 0);
     if (iResult == SOCKET_ERROR)
     {
         handle_send_request_result(SEND_FAIL);

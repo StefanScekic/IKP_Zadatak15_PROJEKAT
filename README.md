@@ -41,3 +41,6 @@ TODO:
   + V1.4
     - Dodat close_sockets() koji zatvara sve konekcije pri gasenju Replikatora
     - Dodato brisanje HashTable-a pri gasenju
+    - Socket za primanje podataka od replikatora 
+  + V1.5
+    - Odabir connection parametara za process

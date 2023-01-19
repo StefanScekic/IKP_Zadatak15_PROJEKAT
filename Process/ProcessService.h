@@ -7,8 +7,7 @@
 #define PROCESS_SERVICE_H
 
 extern service_interface process_service;
-extern int listen_socket_id;
 
-void unregister_service();
+void unregister_service(int id);
 
 #endif // !PROCESS_SERVICE_H

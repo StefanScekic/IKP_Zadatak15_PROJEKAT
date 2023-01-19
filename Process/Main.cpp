@@ -6,6 +6,7 @@
 
 int main(int argc, char* argv[]) {
     clock_t start_time = clock();
+    u_short client_port = 1801;
 
     #pragma region Code
     int iResult = 0;
@@ -14,13 +15,13 @@ int main(int argc, char* argv[]) {
         printf_s("%s\n", argv[1]);
     }
 
-    init_client_sockets(1801);
+    init_client_sockets(&client_port);
 
     send_request(SERVERPORT, RegisterService);
-    //getchar();
     send_request(SERVERPORT, RegisterService);
 
     //Clean-up
+    getchar();
     cleanup(ALL_GOOD);
 #pragma endregion
 

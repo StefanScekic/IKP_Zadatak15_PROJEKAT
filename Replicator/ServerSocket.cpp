@@ -2,7 +2,7 @@
 
 HANDLE threadPool[THREAD_POOL_SIZE];    //thread pool
 
-CRITICAL_SECTION cs;
+CRITICAL_SECTION cs, cs_hash_table;
 HANDLE semafore, interrupt_semaphore, sinterrupt_main;  //semafori
 SOCKET server_socket = INVALID_SOCKET;
 fd_set current_sockets, ready_sockets;
@@ -55,6 +55,7 @@ void send_response(SOCKET cs, char *answer) {
         printf_s("Send failed with error: %d\n", WSAGetLastError());
     }
 }
+
 void handle_unregister_service(char* data) {
     int service_id = -1;
     memcpy(&service_id, data, sizeof(service_id));
@@ -67,8 +68,7 @@ void handle_unregister_service(char* data) {
 int handle_connection(SOCKET *client_socket) {
     int iResult;
     int msgSize = 0;
-    char recvbuf[DEFAULT_BUFLEN];   
-    char databuf[DEFAULT_BUFLEN];    
+    char recvbuf[DEFAULT_BUFLEN];  
 
     SOCKET client_s = *client_socket;
     free(client_socket);
@@ -92,9 +92,9 @@ int handle_connection(SOCKET *client_socket) {
     switch (req.code)
     {
     case UnregisterService:
-        EnterCriticalSection(&cs);
+        EnterCriticalSection(&cs_hash_table);
         handle_unregister_service(req.data);
-        LeaveCriticalSection(&cs);
+        LeaveCriticalSection(&cs_hash_table);
 
         send_response(client_s, (char*)"Odjava uspesna.\n");
         if (closesocket(client_s) == SOCKET_ERROR)
@@ -109,9 +109,9 @@ int handle_connection(SOCKET *client_socket) {
         process p;
         memcpy(&p, req.data, sizeof(process));
 
-        EnterCriticalSection(&cs);
+        EnterCriticalSection(&cs_hash_table);
         replication_service.register_service(p);
-        LeaveCriticalSection(&cs);
+        LeaveCriticalSection(&cs_hash_table);
         send_response(client_s, (char*)"Registracija servisa obradjena.\n");
 
         break;
@@ -248,6 +248,7 @@ void init_resources(int server_port) {
 
     //CriticalSection init
     InitializeCriticalSection(&cs);
+    InitializeCriticalSection(&cs_hash_table);
 
     rollbackCounter = 2;
 
@@ -276,6 +277,20 @@ void init_resources(int server_port) {
     FD_SET(server_socket, &current_sockets);
 
     rollbackCounter = 5;
+
+    //HashTable init
+    init_hash_table();
+
+    rollbackCounter = 6;
+}
+
+//Private function that closes all connected sockets
+void close_sockets() {
+    int i = 0;
+
+    for (i = 0; i < current_sockets.fd_count; i++) {
+        closesocket(current_sockets.fd_array[i]);
+    }
 }
 
 void cleanup(int exit_code) {
@@ -285,10 +300,11 @@ void cleanup(int exit_code) {
     switch (rollbackCounter)
     {
     case 6:
-        //Main Serve Thread Cleanup
+        //HashTable Cleanup
+        delete_hash_table();
     case 5:
-        //Server Socket cleanup
-        closesocket(server_socket);
+        //Sockets cleanup
+        close_sockets();
         CloseHandle(as_thread);
     case 4:
         //ThreadPool cleanup
@@ -296,7 +312,7 @@ void cleanup(int exit_code) {
             printf_s("ReleaseSemaphore error: %d\n", GetLastError());
         }
 
-        WaitForMultipleObjects(THREAD_POOL_SIZE, threadPool, TRUE, INFINITE);
+        WaitForMultipleObjects(THREAD_POOL_SIZE, threadPool, TRUE, INFINITE); //Wait for threads to finish their work
         for (i = 0; i < THREAD_POOL_SIZE; i++) {
             CloseHandle(threadPool[i]);
         }
@@ -308,6 +324,7 @@ void cleanup(int exit_code) {
     case 2:
         //CriticalSection cleanup
         DeleteCriticalSection(&cs);
+        DeleteCriticalSection(&cs_hash_table);
     case 1:
         //WSA cleanup
         WSACleanup();
@@ -329,10 +346,6 @@ void boot_server_socket(int server_port) {
     if ((as_thread = CreateThread(NULL, 0, accept_connections_thread_function, NULL, 0, 0)) == NULL) {
         printf_s("CreateThread failed with error code: %d\n", GetLastError());
         cleanup(MT_FAIL);
-    }
-    else
-    {
-        rollbackCounter = 6;
     }
 
     return;

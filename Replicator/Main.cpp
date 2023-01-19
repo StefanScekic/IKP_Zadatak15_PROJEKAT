@@ -16,8 +16,8 @@ int main() {
     //End program interrup signal
     WaitForSingleObject(sinterrupt_main, INFINITE);
 
-    cleanup(ALL_GOOD);
     //getchar();
+    cleanup(ALL_GOOD);
 
     return 0;
 }

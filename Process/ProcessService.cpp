@@ -22,8 +22,7 @@ void recieve_message() {
 
 void register_service(process p) {
     char buffer[DEFAULT_BUFLEN];
-    int iResult = 0;       
-
+    int iResult = 0;    
 
     request req;
     req.code = RegisterService;

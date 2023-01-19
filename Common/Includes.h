@@ -7,6 +7,5 @@
 #include <stdio.h>
 #include <WS2tcpip.h>
 #include <windows.h>
-#include <WinSock2.h>
 //Dodaje dependancy u podesavanje svakog projekta koji ovo includuje
 #pragma comment(lib, "Ws2_32.lib")

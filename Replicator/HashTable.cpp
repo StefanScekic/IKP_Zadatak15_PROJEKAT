@@ -7,6 +7,7 @@ unsigned int hash(int id) {
 	return id % TABLE_SIZE;
 }
 
+//Initializes the hash table 
 void init_hash_table() {
 	int i = 0;
 	for (i = 0; i < TABLE_SIZE; i++) {
@@ -14,6 +15,7 @@ void init_hash_table() {
 	}
 }
 
+//Prints all members of hash table
 void print_table() {
 	int i = 0;
 	for (i = 0; i < TABLE_SIZE; i++) {
@@ -112,4 +114,23 @@ bool hash_table_delete(int id) {
 
 	printf_s("HASH TABLE: delete successfull, id : %d\n", id);
 	return true;
+}
+
+void delete_hash_table() {
+	int i = 0;
+	for (i = 0; i < TABLE_SIZE; i++) {
+		if (hash_table[i] == NULL)
+			continue;
+		else {
+			table_node* temp = hash_table[i];
+			table_node* prev = hash_table[i];
+
+			while (temp != NULL) {				
+				temp = temp->next;
+				free(prev);
+				prev = NULL;
+				prev = temp;
+			}
+		}
+	}
 }

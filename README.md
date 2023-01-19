@@ -7,15 +7,19 @@ TODO:
   - [X] Razmena podataka 
   - [X] Rad kao asinhroni Thread
 - [X] Slanje zahteva Replikatoru
-- [ ] Obrada zahteva
-- [ ] Proces : Primanje podataka od replikatora
-- [ ] Registracija procesa
-  - [ ] Izbacivanje procesa iz liste pri gasenju konekcije 
+- [X] Proces : Primanje podataka od replikatora
+- [X] Registracija procesa
+  - [X] Izbacivanje procesa iz liste pri gasenju konekcije 
   - [X] Struktura za skladistenje registrovanih procesa
   - [X] Provera postojanja procesa
 - [ ] Konekcija izmedju 2 Replikatora
 - [ ] Dinamicki niz za replikaciju
-- [ ] Dodati closesockets() koji ce da prodje korz sve current sokcete i zatvorice ih
+- [ ] Obrada zahteva
+- [ ] Sinhrona/Asinhrona replikacija
+- [X] Dodati close_sockets() koji ce da prodje korz sve current sokcete i zatvorice ih
+- [ ] Pocistiti finalnu verziju koda i dodati detaljnije opise funkcija
+- [ ] Dokumentacija
+- [ ] Testovi
 
   Kao ChangeLog:
   + V1.0
@@ -34,3 +38,6 @@ TODO:
     - Print Hash Table
     - Insert u hash table update
     - Server sad podrzava sesiju klijenta
+  + V1.4
+    - Dodat close_sockets() koji zatvara sve konekcije pri gasenju Replikatora
+    - Dodato brisanje HashTable-a pri gasenju

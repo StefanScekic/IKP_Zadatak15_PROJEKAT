@@ -44,6 +44,8 @@ bool hash_table_lookup(int id, process* p);
 */
 bool hash_table_delete(int id);
 
+void delete_hash_table();
+
 void print_table();
 #endif // !HASH_TABLE_H
 

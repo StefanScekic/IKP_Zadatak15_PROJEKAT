@@ -23,7 +23,7 @@ enum SEND_REQUEST_RESULT {
 	NO_RESPONSE = -3
 };
 
-void init_client_sockets(int client_port);
+void init_client_sockets(u_short *client_port);
 
 void send_request(int server_port, RequestCode code);
 

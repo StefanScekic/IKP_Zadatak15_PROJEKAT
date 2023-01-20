@@ -12,8 +12,7 @@ TODO:
   - [X] Izbacivanje procesa iz liste pri gasenju konekcije 
   - [X] Struktura za skladistenje registrovanih procesa
   - [X] Provera postojanja procesa
-- [ ] Konekcija izmedju 2 Replikatora
-- [ ] Dinamicki niz za replikaciju
+- [X] Konekcija izmedju 2 Replikatora
 - [ ] Obrada zahteva
 - [ ] Sinhrona/Asinhrona replikacija
 - [X] Dodati close_sockets() koji ce da prodje korz sve current sokcete i zatvorice ih
@@ -44,3 +43,4 @@ TODO:
     - Socket za primanje podataka od replikatora 
   + V1.5
     - Odabir connection parametara za process
+    - CLEANUP

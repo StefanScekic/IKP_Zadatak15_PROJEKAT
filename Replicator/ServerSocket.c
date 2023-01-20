@@ -3,21 +3,24 @@
 HANDLE threadPool[THREAD_POOL_SIZE];        //Thread pool
 
 SOCKET server_socket = INVALID_SOCKET;      //Accept requests socket
-CRITICAL_SECTION cs;                 //Enqueue/Dequeue critical section
-CRITICAL_SECTION cs_hash_table;      //HashTable critical section
-fd_set current_sockets;              //FDs of socekts select is listening on
-fd_set ready_sockets;                //Helper FD set, select is destructive
+SOCKET rtr_socket = INVALID_SOCKET;         //Send data to be replicated socket
+CRITICAL_SECTION cs;                        //Enqueue/Dequeue critical section
+CRITICAL_SECTION cs_hash_table;             //HashTable critical section
+fd_set current_sockets;                     //FDs of socekts select is listening on
+fd_set ready_sockets;                       //Helper FD set, select is destructive
 
 HANDLE sinterrupt_main = NULL;              //End program semaphore
 HANDLE semafore = NULL;                     //There is work semaphore
 HANDLE interrupt_semaphore = NULL;          //Close worker threads semaphore
 HANDLE as_thread = NULL;                    //Accept requests socket thread
+HANDLE repl_repl_thread = NULL;             //Replicator to replicator connection thread
 
 int counter = 0;                            //Counts the number of connections handled
 int rollbackCounter = 0;                    //Counter used for clean up
+BOOL shutdows_signal = FALSE;                //cheat
 
 #pragma region ServerPort
-u_int server_port = DEFAULT_SERVER_PORT;
+u_short server_port = DEFAULT_SERVER_PORT;
 
 void set_server_port(u_short port) {
     server_port = port;
@@ -29,7 +32,7 @@ u_short get_server_port() {
 #pragma endregion
 
 #pragma region ReplicatorPort
-u_int replicator_port = 9999;       //Port for server to conect to another replicator
+u_short replicator_port = DEFAULT_REPLICATOR_CONNECT_PORT;       //Port for server to conect to another replicator
 
 void set_replicator_port(u_short port) {
     replicator_port = port;
@@ -44,32 +47,47 @@ u_short get_replicator_port() {
 
 /*
     Close all sockets saved in FDs
-*/
+ */
 void close_sockets();
+
 /*
     Initialize ThreadPool
 */
 int init_tp();
+
 /*
     Function ran by thread that accpts requests from clients
 */
 DWORD WINAPI accept_connections_thread_function(LPVOID arg);
+
+/*
+    Function ran by thread that communicates with another Replicator
+*/
+DWORD WINAPI rtr_thread(LPVOID arg);
+
 /*
     Function ran by worker threads that handle requests
 */
 DWORD WINAPI thread_function(LPVOID arg);
+
 /*
     Function called by worker threads to process requests
 */
 int handle_connection(SOCKET* client_socket);
+
 /*
     Loads id from data and calls hash_table_delete
 */
 void handle_unregister_service(char* data);
+
 /*
-    Initializes server socket params and puts it in listen mode
+    Make a socket and put it in listen mode
+
+    @param port: port it will listen on
+    @param mode: 0 for non blocking, 1 for blocking
 */
-SOCKET server_setup();
+SOCKET setup_socket(u_short port, u_long mode);
+
 #pragma endregion
 
 #pragma region PublicFunctions
@@ -154,12 +172,17 @@ void boot_server_socket() {
     //ServerSocket init
     FD_ZERO(&current_sockets);
 
-    server_socket = server_setup();
+    server_socket = setup_socket(server_port, 1);
     if ((server_socket == INVALID_SOCKET) || (server_socket == SOCKET_ERROR))
         cleanup(SC_FAIL);
 
     FD_SET(server_socket, &current_sockets);
 
+    if (replicator_port != DEFAULT_REPLICATOR_CONNECT_PORT) {   //If port was not changed, run app in test mode
+        rtr_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if ((rtr_socket == INVALID_SOCKET))
+            cleanup(SC_FAIL);
+    }
     rollbackCounter = 5;
 
     //HashTable init
@@ -171,6 +194,14 @@ void boot_server_socket() {
     if ((as_thread = CreateThread(NULL, 0, accept_connections_thread_function, NULL, 0, 0)) == NULL) {
         printf_s("CreateThread failed with error code: %d\n", GetLastError());
         cleanup(TH_FAIL);
+    }
+
+    //Replicator - Replicator communication thread
+    if (rtr_socket != INVALID_SOCKET) {
+        if ((as_thread = CreateThread(NULL, 0, rtr_thread, NULL, 0, 0)) == NULL) {
+            printf_s("CreateThread failed with error code: %d\n", GetLastError());
+            cleanup(TH_FAIL);
+        }
     }
 
     rollbackCounter = 7;
@@ -188,6 +219,9 @@ void close_sockets() {
     for (i = 0; i < current_sockets.fd_count; i++) {
         closesocket(current_sockets.fd_array[i]);
     }
+
+    if (rtr_socket != INVALID_SOCKET)
+        closesocket(rtr_socket);
 }
 
 int init_tp() {
@@ -205,6 +239,32 @@ int init_tp() {
     return 0;
 }
 
+DWORD WINAPI rtr_thread(LPVOID arg) {
+    int iResult = 0;
+
+    SA_IN server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
+    server_addr.sin_port = htons(replicator_port);
+
+    while(TRUE)
+    {
+        if (shutdows_signal)
+            return 22;
+
+        iResult = connect(rtr_socket, (SA*)&server_addr, sizeof(server_addr));
+        if (iResult != SOCKET_ERROR) {
+            printf_s("Connection with another replicator established!\n");
+            break;
+        }
+
+        printf_s("Connect failed with error code: %d\nTrying again in 2s.\n", WSAGetLastError());
+        Sleep(2000);
+    } 
+
+    return 0;
+}
+
 DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
     SOCKET client_socket = INVALID_SOCKET;
     SA_IN client_addr;
@@ -216,7 +276,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
     tv.tv_usec = 100;
 
     //Main while loop
-    printf_s("Waiting for connections...\n");
+    printf_s("Replicator request socket waiting for connections...\n");
     while (TRUE) {
         //Wait and accept an incoming connection
         //Addr_size changes with each accept, so a reset is needed
@@ -225,6 +285,7 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
 
         if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, &tv) < 0) {
             printf_s("Client socket select failed, error code : %d\n", WSAGetLastError());
+            shutdows_signal = TRUE;
             ReleaseSemaphore(sinterrupt_main, 1, NULL);
             return 42;
         }
@@ -373,42 +434,43 @@ void handle_unregister_service(char* data) {
     return;
 }
 
-SOCKET server_setup() {
+SOCKET setup_socket(u_short port, u_long mode) {
+    SOCKET return_socket = INVALID_SOCKET;
     SA_IN server_addr;
 
     //Server socket creation
-    server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (server_socket == INVALID_SOCKET) {
+    return_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (return_socket == INVALID_SOCKET) {
         printf_s("Server socket creation failed, error code : %d", WSAGetLastError());
-        return server_socket;
+        return return_socket;
     }
 
     //init the address struct
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(server_port);
+    server_addr.sin_port = htons(port);
 
     //Bind socket
-    bind(server_socket, (SA*)&server_addr, sizeof(server_addr));
-    if (server_socket == SOCKET_ERROR) {
+    bind(return_socket, (SA*)&server_addr, sizeof(server_addr));
+    if (return_socket == SOCKET_ERROR) {
         printf_s("Server socket binding failed, error code : %d", WSAGetLastError());
-        return server_socket;
+        return return_socket;
     }
 
     //Set nonblocking mode
-    unsigned long int nonBlockingMode = 1;
-    ioctlsocket(server_socket, FIONBIO, &nonBlockingMode);
+    u_long nonBlockingMode = mode;
+    ioctlsocket(return_socket, FIONBIO, &nonBlockingMode);
 
     //Set socket to listen mode
-    listen(server_socket, SERVER_BACKLOG);
-    if (server_socket == SOCKET_ERROR) {
+    listen(return_socket, SERVER_BACKLOG);
+    if (return_socket == SOCKET_ERROR) {
         printf_s("Server socket listen mode failed, error code : %d", WSAGetLastError());
-        return server_socket;
+        return return_socket;
     }
 
-    printf_s("Socket listening on port %d\n", server_port);
+    printf_s("Socket listening on port %d\n", port);
 
-    return server_socket;
+    return return_socket;
 }
 
 #pragma endregion

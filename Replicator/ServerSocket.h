@@ -8,8 +8,9 @@
 #ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
 
-#define THREAD_POOL_SIZE 20		//Number of woker threads
-#define SERVER_BACKLOG 200		//Number of sockets that can wait for connection
+#define DEFAULT_REPLICATOR_CONNECT_PORT	9999	//Port of another replicator
+#define THREAD_POOL_SIZE 20						//Number of woker threads
+#define SERVER_BACKLOG 200						//Number of sockets that can wait for connection
 
 extern HANDLE sinterrupt_main;
 

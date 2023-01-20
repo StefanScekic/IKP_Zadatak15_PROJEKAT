@@ -126,7 +126,7 @@ void cleanup(int exit_code) {
         CloseHandle(receive_thread);
     case 4:
         //Send request for process to be removed from registered processes struct
-        send_request(UnregisterService);
+        send_request(UnregisterService, NULL);
     case 3:
         //Close socket for sending requests
         closesocket(send_request_socket);
@@ -149,7 +149,7 @@ void cleanup(int exit_code) {
     return;
 }
 
-void send_request(request_code code) {
+void send_request(request_code code, void* data) {
 
     //DO SOMETHING
     switch (code)

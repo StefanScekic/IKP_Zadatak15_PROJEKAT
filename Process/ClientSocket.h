@@ -43,6 +43,6 @@ void init_client_sockets();
 
 void cleanup(int exit_code);
 
-void send_request(request_code code);
+void send_request(request_code code, void* data);
 
 #endif // !client_socket_H

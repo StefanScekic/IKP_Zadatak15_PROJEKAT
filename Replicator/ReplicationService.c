@@ -1,14 +1,7 @@
 #include "ReplicationService.h"
 
-void register_service(process p) {
-	if(hash_table_insert(p))
-		printf_s("Insert Successfull.\n");
-	else
-	{
-		printf_s("Insert failed.\n");
-	}
-
-	print_table();
+void register_service(int service_id) {
+	
 
 	return;
 }
@@ -33,6 +26,21 @@ void send_data(int service_id, void* data, int data_size) {
 }
 
 void receive_data(void* data, int data_size) {
+	int iResult = 0;
+
+	file temp_file;
+	memcpy(&temp_file, data, data_size);
+
+	process p;
+	hash_table_lookup(temp_file.ownder_id, &p);
+
+	iResult = send(p.socket, (char*)&temp_file, sizeof(temp_file), 0);
+	if (iResult == SOCKET_ERROR)
+	{
+		printf_s("Send failed with error code: %d\n", WSAGetLastError());
+		return;
+	}
+
 	return;
 }
 

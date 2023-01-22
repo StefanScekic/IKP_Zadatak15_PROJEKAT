@@ -1,10 +1,17 @@
 #include "ClientSocket.h"
 
-SOCKET receive_data_socket = INVALID_SOCKET; //Socket used for receiving data to be replicated
 HANDLE receive_thread = NULL;                //Thread that runs recieve_data_socket
 HANDLE rds_socket_finished = NULL;           //Semaphore that signals receive data socket is initialized
 
 int rollbackCounter = 0; //Counter used for clean up
+
+#pragma region ReceiveDataSocket
+SOCKET receive_data_socket = INVALID_SOCKET; //Socket used for receiving data to be replicated
+
+SOCKET get_receive_data_socket() {
+    return receive_data_socket;
+}
+#pragma endregion
 
 #pragma region SendRequestSocket
 SOCKET send_request_socket = INVALID_SOCKET; //Socket used for sending requests to Replicator
@@ -14,11 +21,25 @@ SOCKET get_send_request_socket() {
 }
 #pragma endregion
 
+#pragma region ProcessDirectory
+
+char resource_directory[100] = "process";
+
+char* get_process_dir() {
+    return resource_directory;
+}
+#pragma endregion
+
 #pragma region ProcessId
 int process_id = 1;      //Process id, 1 by default
 
 void set_process_id(int id) {
     process_id = id;
+
+    char index_string[10];
+    _itoa(process_id, index_string, 10);
+    strcat(resource_directory, index_string);
+    strcat(resource_directory, "_resources");
 }
 
 int get_process_id() {
@@ -35,18 +56,6 @@ void set_server_port(u_short port) {
 
 u_short get_server_port() {
     return server_port;
-}
-#pragma endregion
-
-#pragma region ClientPort
-u_short client_port = 1700;
-
-void set_client_port(u_short port) {
-    client_port = port;
-}
-
-u_short get_client_port() {
-    return client_port;
 }
 #pragma endregion
 
@@ -123,6 +132,7 @@ void cleanup(int exit_code) {
     case 5:
         //Close receive socket and free thread handle
         closesocket(receive_data_socket);
+        WaitForSingleObject(receive_thread, 2000);
         CloseHandle(receive_thread);
     case 4:
         //Send request for process to be removed from registered processes struct
@@ -155,24 +165,11 @@ void send_request(request_code code, void *data) {
     switch (code)
     {
     case SendData:
-
-
+        {}
+        process_service.send_data(process_id, data, 1);
         break;
     case RegisterService:
-        {}
-        process p;
-        struct sockaddr_in socket_address;
-        int socket_address_len = sizeof(socket_address);
-
-        getsockname(receive_data_socket, (struct sockaddr*)&socket_address, &socket_address_len);
-    
-        u_short port = ntohs(socket_address.sin_port);
-
-        p.ID = process_id;
-        p.address = inet_addr(DEFAULT_ADDRESS);
-        p.port = port;
-
-        process_service.register_service(p);    
+        process_service.register_service(process_id);    
         break;
     case UnregisterService:
         unregister_service(process_id);
@@ -202,9 +199,12 @@ int init_request_socket() {
 
 DWORD WINAPI receive_thread_function(LPVOID arg) {
     int iResult = 0;
-    char buffer[DEFAULT_BUFLEN];
+    char buffer[MAX_DATA_SIZE];
 
     SA_IN server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
+    server_addr.sin_port = htons(server_port);
 
     SOCKET accepted_socket = INVALID_SOCKET;
 
@@ -215,55 +215,54 @@ DWORD WINAPI receive_thread_function(LPVOID arg) {
         return 1;
     }
 
-    //init the address struct
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-    server_addr.sin_port = htons(client_port);
-
-    //Bind socket
-    bind(receive_data_socket, (SA*)&server_addr, sizeof(server_addr));
-    if (receive_data_socket == SOCKET_ERROR) {
-        printf_s("Client listen socket binding failed, error code : %d", WSAGetLastError());
-        return 2;
+    if (connect(receive_data_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
+    {
+        printf_s("Connect failed with error code: %d\n", WSAGetLastError());
     }
 
-    //Set socket to listen mode
-    listen(receive_data_socket, 20);
-    if (receive_data_socket == SOCKET_ERROR) {
-        printf_s("Client listen socket listen mode failed, error code : %d", WSAGetLastError());
-        return 3;
-    }
-
-    printf_s("Socket listening on port %d\n", client_port);
     ReleaseSemaphore(rds_socket_finished, 1, NULL);     //Tell process that it's safe to continue init
 
     //Accept connections and rcv data
     do
     {
-        accepted_socket = accept(receive_data_socket, NULL, NULL);
-
-        if (accepted_socket == INVALID_SOCKET)
-        {
-            printf("Accept failed with error: %d\n", WSAGetLastError());
-            return 4;
-        }
-
         printf("Connected!\n");
         do
         {
             // Receive data until Replicator shuts down the connection
-            iResult = recv(accepted_socket, buffer, sizeof(buffer), 0);
+            iResult = recv(receive_data_socket, buffer, sizeof(buffer), 0);
             if (iResult > 0)
             {
-                buffer[iResult] = '\0';
-                printf("Message received from client: %s.\n", buffer);
+                if (iResult < 100) {
+                    buffer[iResult] = '\0';
+                    printf("Message received from replicator: %s\n", buffer);
+
+                }
+                else
+                {
+                    file temp_file;
+                    memcpy(&temp_file, buffer, sizeof(file));
+
+                    char wr_location[100] = "";
+                    char file_name[MAX_FILE_NAME] = { 0 };
+
+                    memcpy(file_name, temp_file.file_name, sizeof(temp_file.file_name));
+                    strtok(file_name, "Ì");
+
+                    strcat(wr_location, get_process_dir());
+                    strcat(wr_location, "\\");
+                    strcat(wr_location, file_name);
+
+                    printf("%s\n", wr_location);
+
+                    write_file(wr_location, temp_file.file_contents, temp_file.file_length - 4);
+                }
             }
             else if (iResult == 0)
             {
                 // connection was closed gracefully
                 printf("Connection with client closed.\n");
                 closesocket(accepted_socket);
-                break;
+                return 0;
             }
             else
             {

@@ -8,26 +8,21 @@ int main(int argc, char* argv[]) {
 
     #pragma region Code
     //Check if there are any arguments passed to the process, if not default values will be used
-    //process [client_id] [client_port] [server_port] [mode]
+    //process [client_id] [server_port] [mode]
     if (argc > 1) {
         if (argc != 5) {
-            printf_s("Wrong number of arguments.\nCorrect format : .\\Process.exe [client_id] [client_port] [server_port] [mode!=0 = auto]\n");
+            printf_s("Wrong number of arguments.\nCorrect format : .\\Process.exe [client_id] [server_port] [mode!=0 = auto]\n");
             return -1;
         }
 
         set_process_id(strtol(argv[1], NULL, 10));
-        set_client_port((u_short)(strtoul(argv[2], NULL, 10)));
-        set_server_port((u_short)(strtoul(argv[3], NULL, 10)));
-        mode = strtol(argv[4], NULL, 10);
+        set_server_port((u_short)(strtoul(argv[2], NULL, 10)));
+        mode = strtol(argv[3], NULL, 10);
     }
-
-    char resource_directory[100] = "process";
-    char index_string[10];
-    _itoa(get_process_id(), index_string, 10);
-    strcat(resource_directory, index_string);
-    strcat(resource_directory, "_resources");
-
-    CreateDirectoryA((LPCSTR)resource_directory, NULL);
+    
+    char dir[100] = "";
+    strcpy(dir, get_process_dir());
+    CreateDirectoryA((LPCSTR)dir, NULL);
 
     //Start the sockets
     init_client_sockets();
@@ -57,17 +52,27 @@ int main(int argc, char* argv[]) {
                 char file_name[MAX_FILE_NAME] = "";
 
                 scanf_s("%s", file_name, MAX_FILE_NAME);
+                file_name[strlen(file_name)] = '\0';
 
-                strcat(wr_location, resource_directory);
+                strcat(wr_location, get_process_dir());
                 strcat(wr_location, "\\");
                 strcat(wr_location, file_name);
 
                 size_t file_size;
+                printf("%s\n", wr_location);
 
                 char* file_contents = read_file(wr_location, &file_size);
                 if (file_contents != NULL) {
-                    send_request(SendData, file_contents);                    
+                    file temp_file;
+                    temp_file.ownder_id = get_process_id();
+                    memcpy(temp_file.file_contents, file_contents, strlen(file_contents));
+                    temp_file.file_length = strlen(file_contents);
+                    memcpy(temp_file.file_name, file_name, strlen(file_name));
+
+                    send_request(SendData, &temp_file);   
+                    free(file_contents);
                 }
+
                 break;
             case 0:
 

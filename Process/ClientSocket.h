@@ -21,10 +21,6 @@ typedef enum SEND_REQUEST_RESULT {
 void set_server_port(u_short port);
 u_short get_server_port();
 
-//Get, Set for client_port
-void set_client_port(u_short port);
-u_short get_client_port();
-
 //Get, Set for process_id
 void set_process_id(int id);
 int get_process_id();
@@ -32,6 +28,9 @@ int get_process_id();
 //Get send_request_socket
 SOCKET get_send_request_socket();
 
+SOCKET get_receive_data_socket();
+
+char* get_process_dir();
 #pragma endregion
 
 //Rest of functions

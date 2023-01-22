@@ -1,26 +1,36 @@
 #include "ProcessService.h"
 
-void register_service(process p) {
+void register_service(int service_id) {
     int iResult = 0;    
 
     request req;
     req.code = RegisterService;
-    memcpy(req.data, &p, sizeof(p));
+    memcpy(req.data, &service_id, sizeof(service_id));
 
-    iResult = send(get_send_request_socket(), (char*)&req, sizeof(req.code) + sizeof(process), 0);
+    iResult = send(get_receive_data_socket(), (char*)&req, sizeof(req.code) + sizeof(service_id), 0);
     if (iResult == SOCKET_ERROR)
     {
         printf_s("Send failed with error code: %d\n", WSAGetLastError());
         return;
     }
 
-    //printf_s("Bytes Sent: %ld\n", iResult);
-
-    recieve_message(get_send_request_socket());
 	return;
 }
 
 void send_data(int service_id, void* data, int data_size) {
+    int iResult = 0;
+
+    request req;
+    req.code = SendData;
+    memcpy(req.data, data, sizeof(file));
+
+    iResult = send(get_send_request_socket(), (char*)&req, sizeof(req.code) + sizeof(file), 0);
+    if (iResult == SOCKET_ERROR)
+    {
+        printf_s("Send failed with error code: %d\n", WSAGetLastError());
+        return;
+    }
+
 	return;
 }
 

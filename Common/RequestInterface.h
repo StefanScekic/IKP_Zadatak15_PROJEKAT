@@ -24,8 +24,7 @@ typedef struct Request {
 
 typedef struct process {
 	int ID;
-	u_long address;
-	u_short port;
+	SOCKET socket;
 } process;
 
 typedef struct File {
@@ -36,7 +35,7 @@ typedef struct File {
 } file;
 
 typedef struct service_interface {
-	void (*register_service)(process p);
+	void (*register_service)(int service_id);
 	void (*send_data)(int service_id, void *data, int data_size);
 	void (*receive_data)(void* data, int data_size);
 } service_interface;

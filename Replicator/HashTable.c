@@ -23,7 +23,7 @@ void print_table() {
 			table_node* temp = hash_table[i];
 
 			while (temp != NULL) {
-				printf_s(" {%d : %d, %d} ", temp->value.ID, temp->value.address, temp->value.port);
+				printf_s(" {%d : %d} ", temp->value.ID, temp->value.socket);
 				temp = temp->next;
 			}
 		}

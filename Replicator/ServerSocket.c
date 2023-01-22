@@ -8,6 +8,8 @@ CRITICAL_SECTION cs;                        //Enqueue/Dequeue critical section
 CRITICAL_SECTION cs_hash_table;             //HashTable critical section
 fd_set current_sockets;                     //FDs of socekts select is listening on
 fd_set ready_sockets;                       //Helper FD set, select is destructive
+fd_set current_write_sockets;
+fd_set ready_write_sockets;
 
 HANDLE sinterrupt_main = NULL;              //End program semaphore
 HANDLE semafore = NULL;                     //There is work semaphore
@@ -91,6 +93,10 @@ SOCKET setup_socket(u_short port, u_long mode);
 #pragma endregion
 
 #pragma region PublicFunctions
+
+SOCKET get_rtr_socket() {
+    return rtr_socket;
+}
 
 void cleanup(int exit_code) {
     int i = 0;
@@ -282,8 +288,9 @@ DWORD WINAPI accept_connections_thread_function(LPVOID arg) {
         //Addr_size changes with each accept, so a reset is needed
         addr_size = sizeof(SA_IN);
         ready_sockets = current_sockets;
+        ready_write_sockets = current_write_sockets;
 
-        if (select(FD_SETSIZE, &ready_sockets, NULL, NULL, &tv) < 0) {
+        if (select(FD_SETSIZE, &ready_sockets, &ready_write_sockets, NULL, &tv) < 0) {
             printf_s("Client socket select failed, error code : %d\n", WSAGetLastError());
             shutdows_signal = TRUE;
             ReleaseSemaphore(sinterrupt_main, 1, NULL);
@@ -354,7 +361,7 @@ DWORD WINAPI thread_function(LPVOID arg) {
 int handle_connection(SOCKET *client_socket) {
     int iResult = 0;
     int msgSize = 0;
-    char recvbuf[DEFAULT_BUFLEN];  
+    char recvbuf[sizeof(request)];
 
     SOCKET client_s = *client_socket;
     free(client_socket);
@@ -396,21 +403,51 @@ int handle_connection(SOCKET *client_socket) {
         process p;
         memcpy(&p, req.data, sizeof(process));
 
-        EnterCriticalSection(&cs_hash_table);
-        replication_service.register_service(p);
-        LeaveCriticalSection(&cs_hash_table);
+        SA_IN server_addr;
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
+        server_addr.sin_port = htons(p.port);
 
-        send_message(client_s, "Registracija servisa obradjena.\n");
+        printf("%d\n", p.port);
+
+        if (connect(server_socket, (SA*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
+        {
+            printf_s("Connect failed with error code: %d\n", WSAGetLastError());
+        }
+        else
+        {
+            EnterCriticalSection(&cs_hash_table);
+            replication_service.register_service(p);
+            LeaveCriticalSection(&cs_hash_table);
+        }
+
+
+        send_message(client_s, "Primanje servisa obradjeno.\n");
 
         break;
     case SendData:
-        replication_service.send_data(1, req.data, 1);
-        send_message(client_s, "Slanje podataka obradjena.\n");
+        {}
+        file temp_file;
+        memcpy(&temp_file, req.data, sizeof(temp_file));
+
+        replication_service.send_data(temp_file.ownder_id, req.data, sizeof(req.data));
+        send_message(client_s, "Slanje podataka obradjeno.\n");
 
         break;
-    case ReceiveData:
-        replication_service.receive_data(req.data, 1);
-        send_message(client_s, "Primanje podataka obradjena.\n");
+    case Callback:
+        {}
+        process p2;
+        file temp_file_callback;
+        memcpy(&temp_file_callback, req.data, sizeof(temp_file_callback));
+
+        if (hash_table_lookup(temp_file_callback.ownder_id, &p2)) {
+            replication_service.receive_data(req.data, sizeof(req.data));
+            send_message(client_s, "Podatci za replikaciju primljeni.\n");
+        }
+        else
+        {
+            send_message(client_s, "Proces koji treba da primi podatke za replikaciju nije aktivan.\n");
+        }
 
         break;
     default:

@@ -43,3 +43,55 @@ void send_message(SOCKET cs,const char* answer) {
 		printf_s("Send failed with error: %d\n", WSAGetLastError());
 	}
 }
+
+int write_file(const char* dest_path, char* file_contents, size_t file_size) {
+	FILE* dest_file = fopen(dest_path, "wb"); // open the file in binary mode
+	if (dest_file == NULL) {
+		printf("Error opening file\n");
+		return -1;
+	}
+
+	// Write the contents of the buffer to the file
+	size_t bytes_written = fwrite(file_contents, sizeof(char), file_size, dest_file);
+	if (bytes_written != file_size) {
+		printf("Error writing file\n");
+		fclose(dest_file);
+		return -1;
+	}
+
+	fclose(dest_file);
+	return 0;
+}
+
+char* read_file(const char* src_path, size_t* file_size) {
+	FILE* src_file = fopen(src_path, "rb"); // open the file in binary mode
+	if (src_file == NULL) {
+		printf("Error opening file\n");
+		return NULL;
+	}
+
+	// Get the size of the file
+	fseek(src_file, 0, SEEK_END);
+	*file_size = ftell(src_file);
+	rewind(src_file);
+
+	// Allocate memory for the contents of the file
+	char* buffer = (char*)malloc(*file_size);
+	if (buffer == NULL) {
+		printf("Error allocating memory\n");
+		fclose(src_file);
+		return NULL;
+	}
+
+	// Read the contents of the file into the buffer
+	size_t bytes_read = fread(buffer, sizeof(char), *file_size, src_file);
+	if (bytes_read != *file_size) {
+		printf("Error reading file\n");
+		free(buffer);
+		fclose(src_file);
+		return NULL;
+	}
+
+	fclose(src_file);
+	return buffer;
+}

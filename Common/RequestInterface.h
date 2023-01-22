@@ -5,13 +5,15 @@
 
 #include "Includes.h"
 
-#define MAX_DATA_SIZE 2048	//Maximum size of data part of requests sent by clients
+#define MAX_DATA_SIZE 32768	//Maximum size of data part of requests sent by clients
+#define MAX_FILE_NAME 32
+#define MAX_FILE_SIZE (MAX_DATA_SIZE - MAX_FILE_NAME - sizeof(u_int) - sizeof(int))
 
 typedef enum RequestCode
 {
 	RegisterService = 100,
 	SendData = 101,
-	ReceiveData = 102,
+	Callback = 102,
 	UnregisterService = 200
 } request_code;
 
@@ -25,6 +27,13 @@ typedef struct process {
 	u_long address;
 	u_short port;
 } process;
+
+typedef struct File {
+	int ownder_id;
+	char file_name[MAX_FILE_NAME];
+	char file_contents[MAX_FILE_SIZE];
+	u_int file_length;
+} file;
 
 typedef struct service_interface {
 	void (*register_service)(process p);

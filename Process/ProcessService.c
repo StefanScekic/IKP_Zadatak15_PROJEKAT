@@ -25,6 +25,13 @@ void send_data(int service_id, void* data, int data_size) {
 }
 
 void receive_data(void* data, int data_size) {
+    /*file temp_file;
+    memcpy(&temp_file, data, data_size);
+
+    if (write_file(temp_file.file_name, temp_file.file_contents, temp_file.file_size) == 0) {
+        printf("File replicated successfully\n");
+    }*/
+
 	return;
 }
 

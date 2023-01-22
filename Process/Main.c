@@ -2,9 +2,6 @@
 #include "ClientSocket.h"
 #include <time.h>
 
-char* read_file(const char* src_path, size_t* file_size);
-int write_file(const char* dest_path, char* file_contents, size_t file_size);
-
 int main(int argc, char* argv[]) {
     clock_t start_time = clock();
     int mode = 0;
@@ -23,6 +20,14 @@ int main(int argc, char* argv[]) {
         set_server_port((u_short)(strtoul(argv[3], NULL, 10)));
         mode = strtol(argv[4], NULL, 10);
     }
+
+    char resource_directory[100] = "process";
+    char index_string[10];
+    _itoa(get_process_id(), index_string, 10);
+    strcat(resource_directory, index_string);
+    strcat(resource_directory, "_resources");
+
+    CreateDirectoryA((LPCSTR)resource_directory, NULL);
 
     //Start the sockets
     init_client_sockets();
@@ -47,14 +52,21 @@ int main(int argc, char* argv[]) {
                 send_request(RegisterService, NULL);
                 break;
             case 2:
-                {}
+                printf_s("Name of the file to be replicated: ");
+                char wr_location[100] = "";
+                char file_name[MAX_FILE_NAME] = "";
+
+                scanf_s("%s", file_name, MAX_FILE_NAME);
+
+                strcat(wr_location, resource_directory);
+                strcat(wr_location, "\\");
+                strcat(wr_location, file_name);
+
                 size_t file_size;
-                char* file_contents = read_file("SQueue.c", &file_size);
+
+                char* file_contents = read_file(wr_location, &file_size);
                 if (file_contents != NULL) {
-                    if (write_file("kek\\SQueue.c", file_contents, file_size) == 0) {
-                        printf("File replicated successfully\n");
-                    }
-                    free(file_contents);
+                    send_request(SendData, file_contents);                    
                 }
                 break;
             case 0:
@@ -76,57 +88,5 @@ int main(int argc, char* argv[]) {
     double execution_time = (double)((end_time - start_time) / CLOCKS_PER_SEC);
     printf("Execution time: %f seconds\n", execution_time);
 
-    return 0;
-}
-
-char* read_file(const char* src_path, size_t* file_size) {
-    FILE* src_file = fopen(src_path, "rb"); // open the file in binary mode
-    if (src_file == NULL) {
-        printf("Error opening file\n");
-        return NULL;
-    }
-
-    // Get the size of the file
-    fseek(src_file, 0, SEEK_END);
-    *file_size = ftell(src_file);
-    rewind(src_file);
-
-    // Allocate memory for the contents of the file
-    char* buffer = (char*)malloc(*file_size);
-    if (buffer == NULL) {
-        printf("Error allocating memory\n");
-        fclose(src_file);
-        return NULL;
-    }
-
-    // Read the contents of the file into the buffer
-    size_t bytes_read = fread(buffer, sizeof(char), *file_size, src_file);
-    if (bytes_read != *file_size) {
-        printf("Error reading file\n");
-        free(buffer);
-        fclose(src_file);
-        return NULL;
-    }
-
-    fclose(src_file);
-    return buffer;
-}
-
-int write_file(const char* dest_path, char* file_contents, size_t file_size) {
-    FILE* dest_file = fopen(dest_path, "wb"); // open the file in binary mode
-    if (dest_file == NULL) {
-        printf("Error opening file\n");
-        return -1;
-    }
-
-    // Write the contents of the buffer to the file
-    size_t bytes_written = fwrite(file_contents, sizeof(char), file_size, dest_file);
-    if (bytes_written != file_size) {
-        printf("Error writing file\n");
-        fclose(dest_file);
-        return -1;
-    }
-
-    fclose(dest_file);
     return 0;
 }

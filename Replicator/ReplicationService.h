@@ -2,6 +2,7 @@
 #include "../Common/Includes.h"
 #include "../Common/RequestInterface.h"
 #include "HashTable.h"
+#include "ServerSocket.h"
 
 #ifndef REPLICATION_SERVICE_H
 #define REPLICATION_SERVICE_H

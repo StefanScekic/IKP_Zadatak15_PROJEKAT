@@ -149,12 +149,13 @@ void cleanup(int exit_code) {
     return;
 }
 
-void send_request(request_code code, void* data) {
+void send_request(request_code code, void *data) {
 
     //DO SOMETHING
     switch (code)
     {
     case SendData:
+
 
         break;
     case RegisterService:
@@ -172,9 +173,6 @@ void send_request(request_code code, void* data) {
         p.port = port;
 
         process_service.register_service(p);    
-        break;
-    case ReceiveData:
-
         break;
     case UnregisterService:
         unregister_service(process_id);
@@ -230,7 +228,7 @@ DWORD WINAPI receive_thread_function(LPVOID arg) {
     }
 
     //Set socket to listen mode
-    listen(receive_data_socket, 1);
+    listen(receive_data_socket, 20);
     if (receive_data_socket == SOCKET_ERROR) {
         printf_s("Client listen socket listen mode failed, error code : %d", WSAGetLastError());
         return 3;
@@ -250,6 +248,7 @@ DWORD WINAPI receive_thread_function(LPVOID arg) {
             return 4;
         }
 
+        printf("Connected!\n");
         do
         {
             // Receive data until Replicator shuts down the connection

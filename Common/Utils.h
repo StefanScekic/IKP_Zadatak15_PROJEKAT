@@ -22,4 +22,8 @@ void recieve_message(SOCKET socket);
 
 void send_message(SOCKET cs,const char* answer);
 
+char* read_file(const char* src_path, size_t* file_size);
+
+int write_file(const char* dest_path, char* file_contents, size_t file_size);
+
 #endif // !UTILS_H

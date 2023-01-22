@@ -14,6 +14,21 @@ void register_service(process p) {
 }
 
 void send_data(int service_id, void* data, int data_size) {
+	int iResult = 0;
+
+	request req;
+	req.code = Callback;
+	memcpy(req.data, data, data_size);
+
+	iResult = send(get_rtr_socket(), (char*)&req, sizeof(req), 0);
+	if (iResult == SOCKET_ERROR)
+	{
+		printf_s("Send failed with error code: %d\n", WSAGetLastError());
+		return;
+	}
+
+	recieve_message(get_rtr_socket());
+
 	return;
 }
 

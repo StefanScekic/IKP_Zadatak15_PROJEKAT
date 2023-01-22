@@ -22,6 +22,7 @@ u_short get_server_port();
 void set_replicator_port(u_short port);
 u_short get_replicator_port();
 
+SOCKET get_rtr_socket();
 #pragma endregion
 
 

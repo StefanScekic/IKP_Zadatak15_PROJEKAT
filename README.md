@@ -13,12 +13,12 @@ TODO:
   - [X] Struktura za skladistenje registrovanih procesa
   - [X] Provera postojanja procesa
 - [X] Konekcija izmedju 2 Replikatora
-- [ ] Obrada zahteva
+- [X] Obrada zahteva
 - [ ] Sinhrona/Asinhrona replikacija
 - [X] Dodati close_sockets() koji ce da prodje korz sve current sokcete i zatvorice ih
 - [ ] Pocistiti finalnu verziju koda i dodati detaljnije opise funkcija
 - [ ] Dokumentacija
-- [ ] Testovi
+- [X] Testovi
 
   Kao ChangeLog:
   + V1.0
@@ -44,3 +44,6 @@ TODO:
   + V1.5
     - Odabir connection parametara za process
     - CLEANUP
+  + V1.6
+    - Replikacija implementirana
+    - 2 Testa implementirana
